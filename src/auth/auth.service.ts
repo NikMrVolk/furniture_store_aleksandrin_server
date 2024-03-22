@@ -1,20 +1,109 @@
-import { Injectable } from '@nestjs/common'
-import { Prisma, User } from '@prisma/client'
-import { PrismaService } from 'src/prisma.service'
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common'
+import { LoginUserDto } from './dto/login-user.dto'
+import { UserService } from './user.service'
+import * as bcrypt from 'bcrypt'
+import { JwtService } from '@nestjs/jwt'
+import { CreateUserDto } from './dto/create-user.dto'
+import { IAuthResponse } from './auth.types'
+import { Response } from 'express'
 
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService) {}
+    EXPIRE_DAY_REFRESH_TOKEN = 1
+    REFRESH_TOKEN_NAME = 'refreshToken'
 
-    async registration(data: Prisma.UserCreateInput): Promise<User> {
-        return this.prisma.user.create({
-            data,
+    constructor(
+        private userService: UserService,
+        private jwt: JwtService,
+    ) {}
+
+    async registration(dto: CreateUserDto): Promise<IAuthResponse> {
+        const oldUser = await this.userService.getByEmail(dto.email)
+
+        if (oldUser)
+            throw new BadRequestException(
+                `Пользователь с почтой ${dto.email} уже существует`,
+            )
+
+        const { password, ...user } = await this.userService.create(dto)
+
+        const tokens = await this.issueTokens(user.id)
+
+        return { ...user, ...tokens }
+    }
+
+    async login(dto: LoginUserDto): Promise<IAuthResponse> {
+        const { password, ...user } = await this.validateUser(dto)
+        const tokens = await this.issueTokens(user.id)
+
+        return { ...user, ...tokens }
+    }
+
+    async getNewTokens(refreshToken: string): Promise<IAuthResponse> {
+        const result = await this.jwt.verifyAsync(refreshToken)
+        if (!result) throw new UnauthorizedException('Invalid refresh token')
+
+        const { password, ...user } = await this.userService.getById(result.id)
+        const tokens = await this.issueTokens(user.id)
+
+        return { ...user, ...tokens }
+    }
+
+    private async validateUser(dto: LoginUserDto) {
+        const user = await this.userService.getByEmail(dto.email)
+
+        if (!user)
+            throw new NotFoundException(
+                `Пользователь с почтой ${dto.email} не зарегистрирован`,
+            )
+
+        const comparePassword = bcrypt.compareSync(dto.password, user.password)
+        console.log(comparePassword)
+        if (!comparePassword)
+            throw new UnauthorizedException('Не верный пароль')
+
+        return user
+    }
+
+    private async issueTokens(userId: number) {
+        const data = { id: userId }
+
+        const accessToken = this.jwt.sign(data, {
+            expiresIn: '1h',
+        })
+
+        const refreshToken = this.jwt.sign(data, {
+            expiresIn: '15d',
+        })
+
+        return { accessToken, refreshToken }
+    }
+
+    addRefreshTokenToResponse(res: Response, refreshToken: string) {
+        const expiresIn = new Date()
+        expiresIn.setDate(expiresIn.getDate() + this.EXPIRE_DAY_REFRESH_TOKEN)
+
+        res.cookie(this.REFRESH_TOKEN_NAME, refreshToken, {
+            httpOnly: true,
+            domain: process.env.DOMAIN,
+            expires: expiresIn,
+            secure: true,
+            sameSite: process.env.SAME_SITE as 'none' | 'lax',
         })
     }
 
-    async getAll(): Promise<User[]> {
-        return this.prisma.user.findMany({
-            select: { id: true, name: true, email: true },
+    removeRefreshTokenFromResponse(res: Response) {
+        res.cookie(this.REFRESH_TOKEN_NAME, '', {
+            httpOnly: true,
+            domain: process.env.DOMAIN,
+            expires: new Date(0),
+            secure: true,
+            sameSite: process.env.SAME_SITE as 'none' | 'lax',
         })
     }
 }

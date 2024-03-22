@@ -1,5 +1,6 @@
 import { AppModule } from './app.module'
 import { NestFactory } from '@nestjs/core'
+import * as cookieParser from 'cookie-parser'
 
 const start = async () => {
     try {
@@ -7,6 +8,12 @@ const start = async () => {
         const app = await NestFactory.create(AppModule)
 
         app.setGlobalPrefix('api')
+        app.use(cookieParser())
+        app.enableCors({
+            origin: [process.env.CLIENT_URL],
+            credentials: true,
+            exposedHeaders: 'set-cookie',
+        })
 
         await app.listen(PORT, () =>
             console.log(`App started work on port ${PORT}`),

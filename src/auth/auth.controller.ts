@@ -4,7 +4,9 @@ import {
     Get,
     HttpCode,
     Post,
+    Req,
     Res,
+    UnauthorizedException,
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common'
@@ -13,7 +15,8 @@ import { UserService } from './user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { LoginUserDto } from './dto/login-user.dto'
 import { IAuthResponseWithoutRefresh, IUserWithoutPassword } from './auth.types'
-import { Response } from 'express'
+import { Request, Response } from 'express'
+import { Auth } from './decorators/auth.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -52,6 +55,37 @@ export class AuthController {
     }
 
     @HttpCode(200)
+    @Post('login/access-token')
+    async loginRefresh(
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response,
+    ): Promise<IAuthResponseWithoutRefresh> {
+        const refreshTokenFromCookies =
+            req.cookies[this.authService.REFRESH_TOKEN_NAME]
+        console.log(refreshTokenFromCookies)
+        if (!refreshTokenFromCookies) {
+            this.authService.removeRefreshTokenFromResponse(res)
+            throw new UnauthorizedException('Refresh token not passed')
+        }
+
+        const { refreshToken, ...response } =
+            await this.authService.getNewTokens(refreshTokenFromCookies)
+
+        this.authService.addRefreshTokenToResponse(res, refreshToken)
+
+        return response
+    }
+
+    @HttpCode(200)
+    @Post('logout')
+    async logout(@Res({ passthrough: true }) res: Response): Promise<string> {
+        this.authService.removeRefreshTokenFromResponse(res)
+
+        return 'success'
+    }
+
+    @HttpCode(200)
+    @Auth()
     @Get()
     async getAll(): Promise<IUserWithoutPassword[]> {
         return this.userService.getAll()

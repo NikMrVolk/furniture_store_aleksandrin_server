@@ -62,7 +62,7 @@ export class AuthController {
     ): Promise<IAuthResponseWithoutRefresh> {
         const refreshTokenFromCookies =
             req.cookies[this.authService.REFRESH_TOKEN_NAME]
-        console.log(refreshTokenFromCookies)
+
         if (!refreshTokenFromCookies) {
             this.authService.removeRefreshTokenFromResponse(res)
             throw new UnauthorizedException('Refresh token not passed')
@@ -71,17 +71,16 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.getNewTokens(refreshTokenFromCookies)
 
-        this.authService.addRefreshTokenToResponse(res, refreshToken)
+        // Re-refresh refresh token after get new AccessToken
+        // this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }
 
     @HttpCode(200)
     @Post('logout')
-    async logout(@Res({ passthrough: true }) res: Response): Promise<string> {
+    async logout(@Res({ passthrough: true }) res: Response) {
         this.authService.removeRefreshTokenFromResponse(res)
-
-        return 'success'
     }
 
     @HttpCode(200)

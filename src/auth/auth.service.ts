@@ -45,13 +45,20 @@ export class AuthService {
     }
 
     async getNewTokens(refreshToken: string): Promise<IAuthResponse> {
-        const result = await this.jwt.verifyAsync(refreshToken)
-        if (!result) throw new UnauthorizedException('Invalid refresh token')
+        try {
+            const result = await this.jwt.verifyAsync(refreshToken)
+            if (!result)
+                throw new UnauthorizedException('Invalid refresh token')
 
-        const { password, ...user } = await this.userService.getById(result.id)
-        const tokens = await this.issueTokens(user.id)
+            const { password, ...user } = await this.userService.getById(
+                result.id,
+            )
+            const tokens = await this.issueTokens(user.id)
 
-        return { ...user, ...tokens }
+            return { ...user, ...tokens }
+        } catch {
+            throw new UnauthorizedException('Invalid refresh token')
+        }
     }
 
     private async validateUser(dto: LoginUserDto) {
@@ -63,7 +70,7 @@ export class AuthService {
             )
 
         const comparePassword = bcrypt.compareSync(dto.password, user.password)
-        console.log(comparePassword)
+
         if (!comparePassword)
             throw new UnauthorizedException('Не верный пароль')
 

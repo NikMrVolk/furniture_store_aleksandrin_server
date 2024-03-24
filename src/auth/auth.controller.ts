@@ -17,6 +17,8 @@ import { LoginUserDto } from './dto/login-user.dto'
 import { IAuthResponseWithoutRefresh, IUserWithoutPassword } from './auth.types'
 import { Request, Response } from 'express'
 import { Auth } from './decorators/auth.decorator'
+import { CurrentUser } from './decorators/user.decorator'
+import { User } from '@prisma/client'
 
 @Controller('auth')
 export class AuthController {
@@ -86,7 +88,8 @@ export class AuthController {
     @HttpCode(200)
     @Auth()
     @Get()
-    async getAll(): Promise<IUserWithoutPassword[]> {
+    async getAll(@CurrentUser() user: User): Promise<IUserWithoutPassword[]> {
+        console.log(user)
         return this.userService.getAll()
     }
 }

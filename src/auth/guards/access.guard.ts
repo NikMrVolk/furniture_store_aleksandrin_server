@@ -9,7 +9,7 @@ import { AuthService } from '../auth.service'
 import * as bcrypt from 'bcrypt'
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtAccessGuard extends AuthGuard('jwt') {
     constructor(
         private jwt: JwtService,
         private readonly authService: AuthService,
@@ -20,12 +20,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     async canActivate(context: ExecutionContext) {
         await super.canActivate(context)
 
-        const request = context.switchToHttp().getRequest()
-        const token = request.headers.authorization?.split(' ')[1]
+        const { headers } = context.switchToHttp().getRequest()
+        const token = headers.authorization?.split(' ')[1]
 
-        const metaDataToFingerprint = this.authService.getMetaDataToFingerprint(
-            request.headers
-        )
+        const metaDataToFingerprint =
+            this.authService.getMetaDataToFingerprint(headers)
 
         if (token) {
             try {
@@ -33,7 +32,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
                 if (bcrypt.compareSync(metaDataToFingerprint, fingerprint)) {
                     return true
                 } else {
-                    throw new UnauthorizedException('Неизвестное устройство')
+                    throw new UnauthorizedException('Invalid access token')
                 }
             } catch {
                 throw new UnauthorizedException('Invalid access token')

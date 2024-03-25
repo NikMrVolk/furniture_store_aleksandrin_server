@@ -18,3 +18,8 @@ export enum FingerprintKeys {
     USER_AGENT = 'user-agent',
     ACCEPT_LANGUAGE = 'accept-language',
 }
+
+export enum Tokens {
+    REFRESH_TOKEN_NAME = 'refreshToken',
+    ACCESS_TOKEN_NAME = 'accessToken',
+}

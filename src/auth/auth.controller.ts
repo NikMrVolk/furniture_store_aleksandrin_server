@@ -15,9 +15,13 @@ import { AuthService } from './auth.service'
 import { UserService } from './user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { LoginUserDto } from './dto/login-user.dto'
-import { IAuthResponseWithoutRefresh, IUserWithoutPassword } from './auth.types'
+import {
+    IAuthResponseWithoutRefresh,
+    IUserWithoutPassword,
+    Tokens,
+} from './auth.types'
 import { Request, Response } from 'express'
-import { Auth } from './decorators/auth.decorator'
+import { Access, Refresh } from './decorators/auth.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -67,6 +71,7 @@ export class AuthController {
     }
 
     @HttpCode(200)
+    @Refresh()
     @Post('login/access-token')
     async loginRefresh(
         @Req() req: Request,
@@ -74,8 +79,7 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
         const fingerprint = await this.authService.hashFingerprint(headers)
-        const refreshTokenFromCookies =
-            req.cookies[this.authService.REFRESH_TOKEN_NAME]
+        const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]
 
         if (!refreshTokenFromCookies) {
             this.authService.removeRefreshTokenFromResponse(res)
@@ -101,7 +105,7 @@ export class AuthController {
     }
 
     @HttpCode(200)
-    @Auth()
+    @Access()
     @Get()
     async getAll(): Promise<IUserWithoutPassword[]> {
         return this.userService.getAll()

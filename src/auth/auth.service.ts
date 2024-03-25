@@ -9,16 +9,17 @@ import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from './dto/create-user.dto'
-import { FingerprintKeys, IAuthResponse } from './auth.types'
+import { FingerprintKeys, IAuthResponse, Tokens } from './auth.types'
 import { Response } from 'express'
 import { PrismaService } from 'src/prisma.service'
 
 @Injectable()
 export class AuthService {
     EXPIRE_DAY_REFRESH_TOKEN = 1
-    REFRESH_TOKEN_NAME = 'refreshToken'
 
-    ARR_HEADERS = Object.keys(FingerprintKeys).map(key => FingerprintKeys[key])
+    ARR_HEADERS = Object.keys(FingerprintKeys).map(
+        (key) => FingerprintKeys[key],
+    )
 
     constructor(
         private userService: UserService,
@@ -108,7 +109,7 @@ export class AuthService {
         const expiresIn = new Date()
         expiresIn.setDate(expiresIn.getDate() + this.EXPIRE_DAY_REFRESH_TOKEN)
 
-        res.cookie(this.REFRESH_TOKEN_NAME, refreshToken, {
+        res.cookie(Tokens.REFRESH_TOKEN_NAME, refreshToken, {
             httpOnly: true,
             domain: process.env.DOMAIN,
             expires: expiresIn,
@@ -118,7 +119,7 @@ export class AuthService {
     }
 
     removeRefreshTokenFromResponse(res: Response) {
-        res.cookie(this.REFRESH_TOKEN_NAME, '', {
+        res.cookie(Tokens.REFRESH_TOKEN_NAME, '', {
             httpOnly: true,
             domain: process.env.DOMAIN,
             expires: new Date(0),
@@ -142,7 +143,7 @@ export class AuthService {
         userId: number,
         fingerprint: string,
         refreshToken: string,
-    ) {
+    ): Promise<void> {
         await this.prisma.session.create({
             data: {
                 userId,
@@ -150,5 +151,9 @@ export class AuthService {
                 refreshToken,
             },
         })
+    }
+
+    async deleteSession(id: number): Promise<void> {
+        await this.prisma.session.delete({ where: { id } })
     }
 }

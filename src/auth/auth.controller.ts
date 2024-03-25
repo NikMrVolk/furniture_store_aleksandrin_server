@@ -22,6 +22,7 @@ import {
 } from './auth.types'
 import { Request, Response } from 'express'
 import { Access, Refresh } from './decorators/auth.decorator'
+import { Fingerprint } from './decorators/fingerprint.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -34,12 +35,10 @@ export class AuthController {
     @HttpCode(200)
     @Post('registration')
     async registration(
-        @Headers() headers: Record<string, string>,
+        @Fingerprint('fingerprint') fingerprint: string,
         @Body() dto: CreateUserDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
-        const fingerprint = await this.authService.hashFingerprint(headers)
-
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
 
@@ -53,12 +52,10 @@ export class AuthController {
     @HttpCode(200)
     @Post('login')
     async login(
-        @Headers() headers: Record<string, string>,
+        @Fingerprint('fingerprint') fingerprint: string,
         @Body() dto: LoginUserDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
-        const fingerprint = await this.authService.hashFingerprint(headers)
-
         const { refreshToken, ...response } = await this.authService.login(
             dto,
             fingerprint,
@@ -75,10 +72,9 @@ export class AuthController {
     @Post('login/access-token')
     async loginRefresh(
         @Req() req: Request,
-        @Headers() headers: Record<string, string>,
+        @Fingerprint('fingerprint') fingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
-        const fingerprint = await this.authService.hashFingerprint(headers)
         const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]
 
         if (!refreshTokenFromCookies) {

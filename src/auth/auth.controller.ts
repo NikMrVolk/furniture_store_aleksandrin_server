@@ -2,6 +2,7 @@ import {
     Body,
     Controller,
     Get,
+    Headers,
     HttpCode,
     Post,
     Req,
@@ -17,8 +18,6 @@ import { LoginUserDto } from './dto/login-user.dto'
 import { IAuthResponseWithoutRefresh, IUserWithoutPassword } from './auth.types'
 import { Request, Response } from 'express'
 import { Auth } from './decorators/auth.decorator'
-import { CurrentUser } from './decorators/user.decorator'
-import { User } from '@prisma/client'
 
 @Controller('auth')
 export class AuthController {
@@ -31,12 +30,16 @@ export class AuthController {
     @HttpCode(200)
     @Post('registration')
     async registration(
+        @Headers() headers: Record<string, string>,
         @Body() dto: CreateUserDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
-        const { refreshToken, ...response } =
-            await this.authService.registration(dto)
+        const fingerprint = await this.authService.hashFingerprint(headers)
 
+        const { refreshToken, ...response } =
+            await this.authService.registration(dto, fingerprint)
+
+        this.authService.createSession(response.id, fingerprint, refreshToken)
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
@@ -46,11 +49,18 @@ export class AuthController {
     @HttpCode(200)
     @Post('login')
     async login(
+        @Headers() headers: Record<string, string>,
         @Body() dto: LoginUserDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
-        const { refreshToken, ...response } = await this.authService.login(dto)
+        const fingerprint = await this.authService.hashFingerprint(headers)
 
+        const { refreshToken, ...response } = await this.authService.login(
+            dto,
+            fingerprint,
+        )
+
+        this.authService.createSession(response.id, fingerprint, refreshToken)
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
@@ -60,8 +70,10 @@ export class AuthController {
     @Post('login/access-token')
     async loginRefresh(
         @Req() req: Request,
+        @Headers() headers: Record<string, string>,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
+        const fingerprint = await this.authService.hashFingerprint(headers)
         const refreshTokenFromCookies =
             req.cookies[this.authService.REFRESH_TOKEN_NAME]
 
@@ -71,7 +83,10 @@ export class AuthController {
         }
 
         const { refreshToken, ...response } =
-            await this.authService.getNewTokens(refreshTokenFromCookies)
+            await this.authService.getNewTokens(
+                refreshTokenFromCookies,
+                fingerprint,
+            )
 
         // Re-refresh refresh token after get new AccessToken
         // this.authService.addRefreshTokenToResponse(res, refreshToken)
@@ -88,8 +103,7 @@ export class AuthController {
     @HttpCode(200)
     @Auth()
     @Get()
-    async getAll(@CurrentUser() user: User): Promise<IUserWithoutPassword[]> {
-        console.log(user)
+    async getAll(): Promise<IUserWithoutPassword[]> {
         return this.userService.getAll()
     }
 }

@@ -9,20 +9,27 @@ import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from './dto/create-user.dto'
-import { IAuthResponse } from './auth.types'
+import { FingerprintKeys, IAuthResponse } from './auth.types'
 import { Response } from 'express'
+import { PrismaService } from 'src/prisma.service'
 
 @Injectable()
 export class AuthService {
     EXPIRE_DAY_REFRESH_TOKEN = 1
     REFRESH_TOKEN_NAME = 'refreshToken'
 
+    ARR_HEADERS = Object.keys(FingerprintKeys).map(key => FingerprintKeys[key])
+
     constructor(
         private userService: UserService,
         private jwt: JwtService,
+        private prisma: PrismaService,
     ) {}
 
-    async registration(dto: CreateUserDto): Promise<IAuthResponse> {
+    async registration(
+        dto: CreateUserDto,
+        fingerprint: string,
+    ): Promise<IAuthResponse> {
         const oldUser = await this.userService.getByEmail(dto.email)
 
         if (oldUser)
@@ -32,19 +39,25 @@ export class AuthService {
 
         const { password, ...user } = await this.userService.create(dto)
 
-        const tokens = await this.issueTokens(user.id)
+        const tokens = await this.issueTokens(user.id, fingerprint)
 
         return { ...user, ...tokens }
     }
 
-    async login(dto: LoginUserDto): Promise<IAuthResponse> {
+    async login(
+        dto: LoginUserDto,
+        fingerprint: string,
+    ): Promise<IAuthResponse> {
         const { password, ...user } = await this.validateUser(dto)
-        const tokens = await this.issueTokens(user.id)
+        const tokens = await this.issueTokens(user.id, fingerprint)
 
         return { ...user, ...tokens }
     }
 
-    async getNewTokens(refreshToken: string): Promise<IAuthResponse> {
+    async getNewTokens(
+        refreshToken: string,
+        fingerprint: string,
+    ): Promise<IAuthResponse> {
         try {
             const result = await this.jwt.verifyAsync(refreshToken)
             if (!result)
@@ -53,7 +66,7 @@ export class AuthService {
             const { password, ...user } = await this.userService.getById(
                 result.id,
             )
-            const tokens = await this.issueTokens(user.id)
+            const tokens = await this.issueTokens(user.id, fingerprint)
 
             return { ...user, ...tokens }
         } catch {
@@ -77,8 +90,8 @@ export class AuthService {
         return user
     }
 
-    private async issueTokens(userId: number) {
-        const data = { id: userId }
+    private async issueTokens(userId: number, fingerprint: string) {
+        const data = { id: userId, fingerprint }
 
         const accessToken = this.jwt.sign(data, {
             expiresIn: '1h',
@@ -111,6 +124,31 @@ export class AuthService {
             expires: new Date(0),
             secure: true,
             sameSite: process.env.SAME_SITE as 'none' | 'lax',
+        })
+    }
+
+    getMetaDataToFingerprint(headers: Record<string, string>): string {
+        return this.ARR_HEADERS.map((el) => headers[el]).join('-')
+    }
+
+    async hashFingerprint(headers: Record<string, string>): Promise<string> {
+        const fingerprint = this.getMetaDataToFingerprint(headers)
+        const hashedFingerprint = await bcrypt.hash(fingerprint, 7)
+
+        return hashedFingerprint
+    }
+
+    async createSession(
+        userId: number,
+        fingerprint: string,
+        refreshToken: string,
+    ) {
+        await this.prisma.session.create({
+            data: {
+                userId,
+                fingerprint,
+                refreshToken,
+            },
         })
     }
 }

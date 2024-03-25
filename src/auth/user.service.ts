@@ -11,7 +11,14 @@ export class UserService {
 
     async getAll(): Promise<IUserWithoutPassword[]> {
         return this.prisma.user.findMany({
-            select: { id: true, name: true, email: true },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                createdAt: true,
+                updatedAt: true,
+                roles: true
+            },
         })
     }
 

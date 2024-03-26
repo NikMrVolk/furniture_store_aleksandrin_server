@@ -105,6 +105,7 @@ export class AuthController {
         // this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         await this.authService.addNewAccessTokenToDB({
+            refreshTokenFromCookies,
             userId: response.id,
             accessToken: response.accessToken,
         })

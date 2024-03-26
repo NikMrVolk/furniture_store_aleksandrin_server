@@ -42,12 +42,13 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
 
-        this.authService.createSession({
+        await this.authService.createSession({
             userId: response.id,
             fingerprint,
             accessToken: response.accessToken,
             refreshToken,
         })
+
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
@@ -66,12 +67,14 @@ export class AuthController {
             fingerprint,
         )
 
-        this.authService.createSession({
+        await this.authService.checkQuantitySessions(response.id)
+        await this.authService.createSession({
             userId: response.id,
             fingerprint,
             accessToken: response.accessToken,
             refreshToken,
         })
+
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response

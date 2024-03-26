@@ -178,6 +178,18 @@ export class AuthService {
         return false
     }
 
+    async checkQuantitySessions(id: number) {
+        const { sessions } = await this.userService.getUserSessions(id)
+
+        if (sessions.length > 2) {
+            const firstSessionId = sessions[0].id
+
+            await this.prisma.session.delete({
+                where: { id: firstSessionId },
+            })
+        }
+    }
+
     async deleteSessionByRefreshToken(
         userId: number,
         refreshToken: string,

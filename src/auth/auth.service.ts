@@ -9,9 +9,10 @@ import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from './dto/create-user.dto'
-import { FingerprintKeys, IAuthResponse, Tokens } from './auth.types'
+import { IAuthResponse, Tokens } from './auth.types'
 import { Response } from 'express'
 import { PrismaService } from 'src/prisma.service'
+import { Session } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
@@ -135,12 +136,16 @@ export class AuthService {
         accessToken: string
         refreshToken: string
     }): Promise<void> {
+        const expiresIn = new Date()
+        expiresIn.setDate(expiresIn.getDate() + 15)
+
         await this.prisma.session.create({
             data: {
                 userId,
                 fingerprint,
                 accessToken,
                 refreshToken,
+                expiresIn,
             },
         })
     }
@@ -160,6 +165,17 @@ export class AuthService {
 
     async deleteSessionById(id: number): Promise<void> {
         await this.prisma.session.delete({ where: { id } })
+    }
+
+    async checkExpiredSession(session: Session): Promise<boolean> {
+        const currentDate = new Date()
+
+        if (currentDate.getTime() > session.expiresIn.getTime()) {
+            await this.prisma.session.delete({ where: { id: session.id } })
+            return true
+        }
+
+        return false
     }
 
     async deleteSessionByRefreshToken(

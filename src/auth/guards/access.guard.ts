@@ -8,6 +8,7 @@ import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
 import { UserService } from '../user.service'
 import { FingerprintKeys } from '../auth.types'
+import { AuthService } from '../auth.service'
 
 const throwError = () => {
     throw new UnauthorizedException('Invalid access token')
@@ -18,6 +19,7 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
     constructor(
         private jwt: JwtService,
         private readonly userService: UserService,
+        private readonly authService: AuthService,
     ) {
         super()
     }
@@ -41,6 +43,10 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
                     (el) => el.accessToken === token,
                 )
                 if (!currentSession) throwError()
+
+                const isSessionExpired = await this.authService.checkExpiredSession(currentSession)
+                if(isSessionExpired) throwError()
+
                 if (
                     bcrypt.compareSync(stringMetaDataToFingerprint, fingerprint)
                 ) {

@@ -2,7 +2,6 @@ import {
     Body,
     Controller,
     Get,
-    Headers,
     HttpCode,
     Post,
     Req,
@@ -23,6 +22,7 @@ import {
 import { Request, Response } from 'express'
 import { Access, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
+import { CurrentUser } from './decorators/user.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -95,8 +95,25 @@ export class AuthController {
     }
 
     @HttpCode(200)
-    @Post('logout')
-    async logout(@Res({ passthrough: true }) res: Response) {
+    @Post('auto-logout')
+    async autoLogout(@Res({ passthrough: true }) res: Response) {
+        this.authService.removeRefreshTokenFromResponse(res)
+    }
+
+    @HttpCode(200)
+    @Access()
+    @Post('user-logout')
+    async logout(
+        @Req() req: Request,
+        @CurrentUser('id') userId: number,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]
+
+        this.authService.deleteSessionByRefreshToken(
+            userId,
+            refreshTokenFromCookies,
+        )
         this.authService.removeRefreshTokenFromResponse(res)
     }
 

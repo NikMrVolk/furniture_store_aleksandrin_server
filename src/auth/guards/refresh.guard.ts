@@ -50,7 +50,7 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
                 )
 
                 if (!hashResult) {
-                    await this.authService.deleteSession(currentSession.id)
+                    await this.authService.deleteSessionById(currentSession.id)
                     throwError()
                 }
 

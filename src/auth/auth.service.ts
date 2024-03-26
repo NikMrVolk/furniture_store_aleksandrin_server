@@ -153,7 +153,24 @@ export class AuthService {
         })
     }
 
-    async deleteSession(id: number): Promise<void> {
+    async deleteSessionById(id: number): Promise<void> {
         await this.prisma.session.delete({ where: { id } })
+    }
+
+    async deleteSessionByRefreshToken(
+        userId: number,
+        refreshToken: string,
+    ): Promise<void> {
+        const { sessions } = await this.userService.getUserSessions(userId)
+
+        const currentSession = sessions.find(
+            (el) => el.refreshToken === refreshToken,
+        )
+
+        if (currentSession) {
+            await this.prisma.session.delete({
+                where: { id: currentSession.id },
+            })
+        }
     }
 }

@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
 import { UserService } from '../user.service'
-import { FingerprintKeys } from '../auth.types'
+import { FingerprintKeys, IJwtPayload } from '../auth.types'
 import { AuthService } from '../auth.service'
 
 const throwError = () => {
@@ -27,25 +27,28 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
     async canActivate(context: ExecutionContext) {
         await super.canActivate(context)
 
-        const request = context.switchToHttp().getRequest()
-        const token = request.headers.authorization?.split(' ')[1]
+        const { headers } = context.switchToHttp().getRequest()
+        const token = headers.authorization?.split(' ')[1]
 
         const stringMetaDataToFingerprint = Object.keys(FingerprintKeys)
-            .map((key) => request.headers[FingerprintKeys[key]])
+            .map((key) => headers[FingerprintKeys[key]])
             .join('-')
 
         if (token) {
             try {
-                const { fingerprint, id } = this.jwt.verify(token)
-                const { sessions } = await this.userService.getUserSessions(id)
+                const { fingerprint, id } =
+                    this.jwt.verify<IJwtPayload>(token)
+                const { sessions } =
+                    await this.userService.getUserSessions(id)
 
                 const currentSession = sessions.find(
                     (el) => el.accessToken === token,
                 )
                 if (!currentSession) throwError()
 
-                const isSessionExpired = await this.authService.checkExpiredSession(currentSession)
-                if(isSessionExpired) throwError()
+                const isSessionExpired =
+                    await this.authService.checkExpiredSession(currentSession)
+                if (isSessionExpired) throwError()
 
                 if (
                     bcrypt.compareSync(stringMetaDataToFingerprint, fingerprint)
@@ -59,6 +62,6 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
             }
         }
 
-        return false
+        throwError()
     }
 }

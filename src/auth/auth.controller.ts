@@ -20,7 +20,7 @@ import {
     Tokens,
 } from './auth.types'
 import { Request, Response } from 'express'
-import { Access, Refresh } from './decorators/auth.decorator'
+import { Access, Admin, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
 

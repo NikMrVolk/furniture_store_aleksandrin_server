@@ -45,6 +45,12 @@ export class UserService {
             password: bcrypt.hashSync(dto.password, 7),
         }
 
+        if (data.email === process.env.ADMIN_MAIL) {
+            return this.prisma.user.create({
+                data: { ...data, roles: { set: ['USER', 'ADMIN'] } },
+            })
+        }
+
         return this.prisma.user.create({ data })
     }
 }

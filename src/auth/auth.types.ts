@@ -1,4 +1,4 @@
-import { User } from '@prisma/client'
+import { $Enums, User } from '@prisma/client'
 
 export type MyOmit<T, K extends keyof T> = Omit<T, K>
 
@@ -22,4 +22,10 @@ export enum FingerprintKeys {
 export enum Tokens {
     REFRESH_TOKEN_NAME = 'refreshToken',
     ACCESS_TOKEN_NAME = 'accessToken',
+}
+
+export interface IJwtPayload {
+    id: number
+    fingerprint: string
+    roles: $Enums.Role[]
 }

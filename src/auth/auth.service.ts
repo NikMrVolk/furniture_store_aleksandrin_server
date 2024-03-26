@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ConflictException,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -9,10 +10,10 @@ import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from './dto/create-user.dto'
-import { IAuthResponse, Tokens } from './auth.types'
+import { IAuthResponse, IJwtPayload, Tokens } from './auth.types'
 import { Response } from 'express'
 import { PrismaService } from 'src/prisma.service'
-import { Session } from '@prisma/client'
+import { $Enums, Session } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
@@ -31,13 +32,17 @@ export class AuthService {
         const oldUser = await this.userService.getByEmail(dto.email)
 
         if (oldUser)
-            throw new BadRequestException(
+            throw new ConflictException(
                 `Пользователь с почтой ${dto.email} уже существует`,
             )
 
         const { password, ...user } = await this.userService.create(dto)
 
-        const tokens = await this.issueTokens(user.id, fingerprint)
+        const tokens = await this.issueTokens({
+            id: user.id,
+            fingerprint,
+            roles: user.roles,
+        })
 
         return { ...user, ...tokens }
     }
@@ -47,7 +52,11 @@ export class AuthService {
         fingerprint: string,
     ): Promise<IAuthResponse> {
         const { password, ...user } = await this.validateUser(dto)
-        const tokens = await this.issueTokens(user.id, fingerprint)
+        const tokens = await this.issueTokens({
+            id: user.id,
+            fingerprint,
+            roles: user.roles,
+        })
 
         return { ...user, ...tokens }
     }
@@ -64,7 +73,11 @@ export class AuthService {
             const { password, ...user } = await this.userService.getById(
                 result.id,
             )
-            const tokens = await this.issueTokens(user.id, fingerprint)
+            const tokens = await this.issueTokens({
+                id: user.id,
+                fingerprint,
+                roles: user.roles,
+            })
 
             return { ...user, ...tokens }
         } catch {
@@ -88,8 +101,8 @@ export class AuthService {
         return user
     }
 
-    private async issueTokens(userId: number, fingerprint: string) {
-        const data = { id: userId, fingerprint }
+    private async issueTokens({ id, fingerprint, roles }: IJwtPayload) {
+        const data = { id, fingerprint, roles }
 
         const accessToken = this.jwt.sign(data, {
             expiresIn: '1h',

@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import { AuthService } from '../auth.service'
 import * as bcrypt from 'bcrypt'
-import { FingerprintKeys, Tokens } from '../auth.types'
+import { FingerprintKeys, IJwtPayload, Tokens } from '../auth.types'
 import { UserService } from '../user.service'
 
 const throwError = () => {
@@ -34,7 +34,7 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
 
         if (token) {
             try {
-                const { id } = this.jwt.verify(token)
+                const { id } = this.jwt.verify<IJwtPayload>(token)
 
                 const { sessions } = await this.userService.getUserSessions(id)
                 if (!sessions.length) throwError()

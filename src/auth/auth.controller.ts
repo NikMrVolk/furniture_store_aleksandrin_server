@@ -10,8 +10,8 @@ import {
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common'
-import { AuthService } from './auth.service'
-import { UserService } from './user.service'
+import { AuthService } from './services/auth.service'
+import { UserService } from './services/user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { LoginUserDto } from './dto/login-user.dto'
 import {
@@ -23,12 +23,16 @@ import { Request, Response } from 'express'
 import { Access, Admin, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
+import { SessionsService } from './services/sessions.service'
+import { TokensService } from './services/tokens.service'
 
 @Controller('auth')
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly userService: UserService,
+        private readonly sessionsService: SessionsService,
+        private readonly tokensService: TokensService,
     ) {}
 
     @UsePipes(new ValidationPipe())
@@ -42,14 +46,14 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
 
-        await this.authService.createSession({
+        await this.sessionsService.createSession({
             userId: response.id,
             fingerprint,
             accessToken: response.accessToken,
             refreshToken,
         })
 
-        this.authService.addRefreshTokenToResponse(res, refreshToken)
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }
@@ -67,15 +71,15 @@ export class AuthController {
             fingerprint,
         )
 
-        await this.authService.checkQuantitySessions(response.id)
-        await this.authService.createSession({
+        await this.sessionsService.checkQuantitySessions(response.id)
+        await this.sessionsService.createSession({
             userId: response.id,
             fingerprint,
             accessToken: response.accessToken,
             refreshToken,
         })
 
-        this.authService.addRefreshTokenToResponse(res, refreshToken)
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }
@@ -91,12 +95,12 @@ export class AuthController {
         const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]
 
         if (!refreshTokenFromCookies) {
-            this.authService.removeRefreshTokenFromResponse(res)
+            this.tokensService.removeRefreshTokenFromResponse(res)
             throw new UnauthorizedException('Refresh token not passed')
         }
 
         const { refreshToken, ...response } =
-            await this.authService.getNewTokens(
+            await this.tokensService.getNewTokens(
                 refreshTokenFromCookies,
                 fingerprint,
             )
@@ -104,7 +108,7 @@ export class AuthController {
         // Re-refresh refresh token after get new AccessToken
         // this.authService.addRefreshTokenToResponse(res, refreshToken)
 
-        await this.authService.addNewAccessTokenToDB({
+        await this.sessionsService.addNewAccessTokenToDB({
             refreshTokenFromCookies,
             userId: response.id,
             accessToken: response.accessToken,
@@ -116,7 +120,7 @@ export class AuthController {
     @HttpCode(200)
     @Post('auto-logout')
     async autoLogout(@Res({ passthrough: true }) res: Response) {
-        this.authService.removeRefreshTokenFromResponse(res)
+        this.tokensService.removeRefreshTokenFromResponse(res)
     }
 
     @HttpCode(200)
@@ -129,11 +133,11 @@ export class AuthController {
     ) {
         const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]
 
-        this.authService.deleteSessionByRefreshToken(
+        this.sessionsService.deleteSessionByRefreshToken(
             userId,
             refreshTokenFromCookies,
         )
-        this.authService.removeRefreshTokenFromResponse(res)
+        this.tokensService.removeRefreshTokenFromResponse(res)
     }
 
     @HttpCode(200)

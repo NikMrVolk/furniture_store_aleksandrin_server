@@ -5,10 +5,10 @@ import {
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
-import { AuthService } from '../auth.service'
 import * as bcrypt from 'bcrypt'
 import { FingerprintKeys, IJwtPayload, Tokens } from '../auth.types'
-import { UserService } from '../user.service'
+import { UserService } from '../services/user.service'
+import { SessionsService } from '../services/sessions.service'
 
 const throwError = () => {
     throw new UnauthorizedException('Invalid refresh token')
@@ -18,8 +18,8 @@ const throwError = () => {
 export class JwtRefreshGuard extends AuthGuard('jwt') {
     constructor(
         private jwt: JwtService,
-        private readonly authService: AuthService,
         private readonly userService: UserService,
+        private readonly sessionsService: SessionsService,
     ) {
         super()
     }
@@ -50,7 +50,9 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
                 )
 
                 if (!hashResult) {
-                    await this.authService.deleteSessionById(currentSession.id)
+                    await this.sessionsService.deleteSessionById(
+                        currentSession.id,
+                    )
                     throwError()
                 }
 

@@ -6,9 +6,9 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
-import { UserService } from '../user.service'
+import { UserService } from '../services/user.service'
 import { FingerprintKeys, IJwtPayload } from '../auth.types'
-import { AuthService } from '../auth.service'
+import { SessionsService } from '../services/sessions.service'
 
 const throwError = () => {
     throw new UnauthorizedException('Invalid access token')
@@ -19,7 +19,7 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
     constructor(
         private jwt: JwtService,
         private readonly userService: UserService,
-        private readonly authService: AuthService,
+        private readonly sessionsService: SessionsService,
     ) {
         super()
     }
@@ -36,10 +36,8 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
 
         if (token) {
             try {
-                const { fingerprint, id } =
-                    this.jwt.verify<IJwtPayload>(token)
-                const { sessions } =
-                    await this.userService.getUserSessions(id)
+                const { fingerprint, id } = this.jwt.verify<IJwtPayload>(token)
+                const { sessions } = await this.userService.getUserSessions(id)
 
                 const currentSession = sessions.find(
                     (el) => el.accessToken === token,
@@ -47,7 +45,9 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
                 if (!currentSession) throwError()
 
                 const isSessionExpired =
-                    await this.authService.checkExpiredSession(currentSession)
+                    await this.sessionsService.checkExpiredSession(
+                        currentSession,
+                    )
                 if (isSessionExpired) throwError()
 
                 if (

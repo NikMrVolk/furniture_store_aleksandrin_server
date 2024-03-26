@@ -16,7 +16,7 @@ import { Session } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
-    EXPIRE_DAY_REFRESH_TOKEN = 1
+    EXPIRE_DAY_REFRESH_TOKEN = 15
 
     constructor(
         private userService: UserService,

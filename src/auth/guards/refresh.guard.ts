@@ -60,6 +60,6 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
             }
         }
 
-        return false
+        throwError()
     }
 }

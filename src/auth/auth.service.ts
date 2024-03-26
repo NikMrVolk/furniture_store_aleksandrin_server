@@ -17,10 +17,6 @@ import { PrismaService } from 'src/prisma.service'
 export class AuthService {
     EXPIRE_DAY_REFRESH_TOKEN = 1
 
-    ARR_HEADERS = Object.keys(FingerprintKeys).map(
-        (key) => FingerprintKeys[key],
-    )
-
     constructor(
         private userService: UserService,
         private jwt: JwtService,
@@ -128,28 +124,37 @@ export class AuthService {
         })
     }
 
-    getMetaDataToFingerprint(headers: Record<string, string>): string {
-        return this.ARR_HEADERS.map((el) => headers[el]).join('-')
-    }
-
-    async hashFingerprint(headers: Record<string, string>): Promise<string> {
-        const fingerprint = this.getMetaDataToFingerprint(headers)
-        const hashedFingerprint = await bcrypt.hash(fingerprint, 7)
-
-        return hashedFingerprint
-    }
-
-    async createSession(
-        userId: number,
-        fingerprint: string,
-        refreshToken: string,
-    ): Promise<void> {
+    async createSession({
+        userId,
+        fingerprint,
+        accessToken,
+        refreshToken,
+    }: {
+        userId: number
+        fingerprint: string
+        accessToken: string
+        refreshToken: string
+    }): Promise<void> {
         await this.prisma.session.create({
             data: {
                 userId,
                 fingerprint,
+                accessToken,
                 refreshToken,
             },
+        })
+    }
+
+    async addNewAccessTokenToDB({
+        userId,
+        accessToken,
+    }: {
+        userId: number
+        accessToken: string
+    }): Promise<void> {
+        await this.prisma.session.update({
+            where: { id: userId },
+            data: { accessToken },
         })
     }
 

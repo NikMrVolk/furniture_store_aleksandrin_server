@@ -5,14 +5,19 @@ import {
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
-import { AuthService } from '../auth.service'
 import * as bcrypt from 'bcrypt'
+import { UserService } from '../user.service'
+import { FingerprintKeys } from '../auth.types'
+
+const throwError = () => {
+    throw new UnauthorizedException('Invalid access token')
+}
 
 @Injectable()
 export class JwtAccessGuard extends AuthGuard('jwt') {
     constructor(
         private jwt: JwtService,
-        private readonly authService: AuthService,
+        private readonly userService: UserService,
     ) {
         super()
     }
@@ -20,22 +25,31 @@ export class JwtAccessGuard extends AuthGuard('jwt') {
     async canActivate(context: ExecutionContext) {
         await super.canActivate(context)
 
-        const { headers } = context.switchToHttp().getRequest()
-        const token = headers.authorization?.split(' ')[1]
+        const request = context.switchToHttp().getRequest()
+        const token = request.headers.authorization?.split(' ')[1]
 
-        const metaDataToFingerprint =
-            this.authService.getMetaDataToFingerprint(headers)
+        const stringMetaDataToFingerprint = Object.keys(FingerprintKeys)
+            .map((key) => request.headers[FingerprintKeys[key]])
+            .join('-')
 
         if (token) {
             try {
-                const { fingerprint } = this.jwt.verify(token)
-                if (bcrypt.compareSync(metaDataToFingerprint, fingerprint)) {
+                const { fingerprint, id } = this.jwt.verify(token)
+                const { sessions } = await this.userService.getUserSessions(id)
+
+                const currentSession = sessions.find(
+                    (el) => el.accessToken === token,
+                )
+                if (!currentSession) throwError()
+                if (
+                    bcrypt.compareSync(stringMetaDataToFingerprint, fingerprint)
+                ) {
                     return true
                 } else {
-                    throw new UnauthorizedException('Invalid access token')
+                    throwError()
                 }
             } catch {
-                throw new UnauthorizedException('Invalid access token')
+                throwError()
             }
         }
 

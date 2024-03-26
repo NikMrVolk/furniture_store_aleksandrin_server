@@ -42,7 +42,12 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
 
-        this.authService.createSession(response.id, fingerprint, refreshToken)
+        this.authService.createSession({
+            userId: response.id,
+            fingerprint,
+            accessToken: response.accessToken,
+            refreshToken,
+        })
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
@@ -61,7 +66,12 @@ export class AuthController {
             fingerprint,
         )
 
-        this.authService.createSession(response.id, fingerprint, refreshToken)
+        this.authService.createSession({
+            userId: response.id,
+            fingerprint,
+            accessToken: response.accessToken,
+            refreshToken,
+        })
         this.authService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
@@ -90,6 +100,11 @@ export class AuthController {
 
         // Re-refresh refresh token after get new AccessToken
         // this.authService.addRefreshTokenToResponse(res, refreshToken)
+
+        await this.authService.addNewAccessTokenToDB({
+            userId: response.id,
+            accessToken: response.accessToken,
+        })
 
         return response
     }

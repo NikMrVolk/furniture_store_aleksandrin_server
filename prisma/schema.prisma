@@ -35,5 +35,6 @@ model Session {
   user   User @relation(fields: [userId], references: [id])
 
   refreshToken String @map("refresh_token")
+  accessToken  String @map("access_token")
   fingerprint  String
 }

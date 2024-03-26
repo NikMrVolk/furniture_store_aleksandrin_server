@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import { AuthService } from '../auth.service'
 import * as bcrypt from 'bcrypt'
-import { Tokens } from '../auth.types'
+import { FingerprintKeys, Tokens } from '../auth.types'
 import { UserService } from '../user.service'
 
 const throwError = () => {
@@ -28,9 +28,9 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
         const request = context.switchToHttp().getRequest()
         const token = request.cookies[Tokens.REFRESH_TOKEN_NAME]
 
-        const metaDataToFingerprint = this.authService.getMetaDataToFingerprint(
-            request.headers,
-        )
+        const stringMetaDataToFingerprint = Object.keys(FingerprintKeys)
+            .map((key) => request.headers[FingerprintKeys[key]])
+            .join('-')
 
         if (token) {
             try {
@@ -45,7 +45,7 @@ export class JwtRefreshGuard extends AuthGuard('jwt') {
                 if (!currentSession) throwError()
 
                 const hashResult = await bcrypt.compare(
-                    metaDataToFingerprint,
+                    stringMetaDataToFingerprint,
                     currentSession.fingerprint,
                 )
 

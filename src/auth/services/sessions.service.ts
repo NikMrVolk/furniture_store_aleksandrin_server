@@ -5,6 +5,8 @@ import { PrismaService } from 'src/prisma.service'
 
 @Injectable()
 export class SessionsService {
+    MAX_SESSIONS_QUANTITY = 3
+
     constructor(
         private prisma: PrismaService,
         private userService: UserService,
@@ -69,15 +71,28 @@ export class SessionsService {
         return false
     }
 
-    async checkQuantitySessions(id: number) {
+    async checkQuantitySessions(id: number): Promise<void> {
         const { sessions } = await this.userService.getUserSessions(id)
 
-        if (sessions.length > 2) {
+        if (sessions.length === this.MAX_SESSIONS_QUANTITY) {
             const firstSessionId = sessions[0].id
 
             await this.prisma.session.delete({
                 where: { id: firstSessionId },
             })
+        }
+
+        if (sessions.length > this.MAX_SESSIONS_QUANTITY) {
+            const deletePromises = sessions.map(async (el, id, arr) => {
+                if (id < arr.length - (this.MAX_SESSIONS_QUANTITY - 1)) {
+                    return await this.prisma.session.delete({
+                        where: { id: el.id },
+                    })
+                }
+                return null
+            })
+
+            await Promise.all(deletePromises)
         }
     }
 

@@ -1,5 +1,8 @@
 import {
+    BadRequestException,
     ConflictException,
+    HttpException,
+    HttpStatus,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -9,7 +12,9 @@ import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from '../dto/create-user.dto'
-import { IAuthResponse, IJwtPayload } from '../auth.types'
+import { IAuthResponse, IJwt, IJwtPayload } from '../auth.types'
+import { SessionsService } from './sessions.service'
+import { Provider } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
@@ -18,6 +23,7 @@ export class AuthService {
     constructor(
         private userService: UserService,
         private jwt: JwtService,
+        private readonly sessionsService: SessionsService,
     ) {}
 
     async registration(
@@ -72,7 +78,11 @@ export class AuthService {
         return user
     }
 
-    private async issueTokens({ id, fingerprint, roles }: IJwtPayload) {
+    private async issueTokens({
+        id,
+        fingerprint,
+        roles,
+    }: IJwtPayload): Promise<IJwt> {
         const data = { id, fingerprint, roles }
 
         const accessToken = this.jwt.sign(data, {
@@ -84,5 +94,44 @@ export class AuthService {
         })
 
         return { accessToken, refreshToken }
+    }
+
+    async oAuth({
+        email,
+        fingerprint,
+        provider,
+    }: {
+        email: string
+        fingerprint: string
+        provider: Provider
+    }): Promise<IAuthResponse> {
+        const userExist = await this.userService.getByEmail(email)
+
+        if (userExist) {
+            await this.sessionsService.checkQuantitySessions(userExist.id)
+            const tokens = await this.issueTokens({
+                id: userExist.id,
+                roles: userExist.roles,
+                fingerprint,
+            })
+            return { ...userExist, ...tokens }
+        }
+
+        const user = await this.userService.createByOAuth({email, provider})
+
+        if (!user) {
+            throw new HttpException(
+                `Не получилось создать пользователя с почтой ${email} в ${provider.toLowerCase()}`,
+                HttpStatus.BAD_REQUEST,
+            )
+        }
+
+        const tokens = await this.issueTokens({
+            id: userExist.id,
+            roles: userExist.roles,
+            fingerprint,
+        })
+
+        return { ...user, ...tokens }
     }
 }

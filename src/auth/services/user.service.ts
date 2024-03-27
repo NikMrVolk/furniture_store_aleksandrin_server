@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { Session, User } from '@prisma/client'
+import { Provider, Session, User } from '@prisma/client'
 import { PrismaService } from 'src/prisma.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import * as bcrypt from 'bcrypt'
@@ -18,6 +18,7 @@ export class UserService {
                 createdAt: true,
                 updatedAt: true,
                 roles: true,
+                provider: true,
             },
         })
     }
@@ -52,5 +53,27 @@ export class UserService {
         }
 
         return this.prisma.user.create({ data })
+    }
+
+    async createByOAuth({
+        email,
+        provider,
+    }: {
+        provider: Provider
+        email: string
+    }): Promise<User> {
+        if (email === process.env.ADMIN_MAIL) {
+            return this.prisma.user.create({
+                data: {
+                    email,
+                    roles: { set: ['USER', 'ADMIN'] },
+                    provider,
+                },
+            })
+        }
+
+        return this.prisma.user.create({
+            data: { email, provider },
+        })
     }
 }

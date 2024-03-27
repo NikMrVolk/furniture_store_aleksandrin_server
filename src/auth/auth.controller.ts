@@ -3,7 +3,10 @@ import {
     Controller,
     Get,
     HttpCode,
+    HttpException,
+    HttpStatus,
     Post,
+    Query,
     Req,
     Res,
     UnauthorizedException,
@@ -19,20 +22,28 @@ import {
     IUserWithoutPassword,
     Tokens,
 } from './auth.types'
-import { Request, Response } from 'express'
-import { Access, Admin, Refresh } from './decorators/auth.decorator'
+import { Request, response, Response } from 'express'
+import { Access, Google, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
 import { SessionsService } from './services/sessions.service'
 import { TokensService } from './services/tokens.service'
+import { HttpService } from '@nestjs/axios'
+import { mergeMap } from 'rxjs'
+import { handleTimeoutAndErrors } from 'src/shared/helpers'
+import { Provider } from '@prisma/client'
 
 @Controller('auth')
 export class AuthController {
+    GOOGLE_SUCCESS_URL = 'http://localhost:4000/api/auth/google/success'
+    GOOGLE_ACCESS_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo'
+
     constructor(
         private readonly authService: AuthService,
         private readonly userService: UserService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
+        private readonly httpService: HttpService,
     ) {}
 
     @UsePipes(new ValidationPipe())
@@ -145,5 +156,55 @@ export class AuthController {
     @Get()
     async getAll(): Promise<IUserWithoutPassword[]> {
         return this.userService.getAll()
+    }
+
+    @HttpCode(200)
+    @Google()
+    @Get('google')
+    googleAuth() {}
+
+    @HttpCode(200)
+    @Google()
+    @Get('google/callback')
+    googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+        const token = req.user[Tokens.ACCESS_TOKEN_NAME]
+        return res.redirect(`${this.GOOGLE_SUCCESS_URL}?token=${token}`)
+    }
+
+    @HttpCode(200)
+    @Get('google/success')
+    async googleSuccess(
+        @Query('token') token: string,
+        @Fingerprint('fingerprint') fingerprint: string,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        return this.httpService
+            .get(`${this.GOOGLE_ACCESS_URL}?access_token=${token}`)
+            .pipe(
+                mergeMap(async ({ data }) => {
+                    console.log(data)
+                    const { refreshToken, ...response } =
+                        await this.authService.oAuth({
+                            email: data.email,
+                            fingerprint,
+                            provider: Provider.GOOGLE,
+                        })
+
+                    await this.sessionsService.createSession({
+                        userId: response.id,
+                        fingerprint,
+                        accessToken: response.accessToken,
+                        refreshToken,
+                    })
+
+                    this.tokensService.addRefreshTokenToResponse(
+                        res,
+                        refreshToken,
+                    )
+
+                    return response
+                }),
+                handleTimeoutAndErrors(),
+            )
     }
 }

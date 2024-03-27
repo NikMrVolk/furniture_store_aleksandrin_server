@@ -5,16 +5,19 @@ import { getJwtConfig } from './config/jwt.config'
 import { PrismaService } from 'src/prisma.service'
 import { AuthController } from './auth.controller'
 import { AuthService } from './services/auth.service'
-import { JwtStrategy } from './jwt.strategy'
 import { UserService } from './services/user.service'
 import { TokensService } from './services/tokens.service'
 import { SessionsService } from './services/sessions.service'
+import { JwtStrategy } from './strategies/jwt.strategy'
+import { GoogleStrategy } from './strategies/google.strategy'
+import { HttpModule } from '@nestjs/axios'
 
 @Module({
     controllers: [AuthController],
     providers: [
         AuthService,
         JwtStrategy,
+        GoogleStrategy,
         UserService,
         PrismaService,
         TokensService,
@@ -27,6 +30,7 @@ import { SessionsService } from './services/sessions.service'
             inject: [ConfigService],
             useFactory: getJwtConfig,
         }),
+        HttpModule,
     ],
 })
 export class AuthModule {}

@@ -117,8 +117,8 @@ export class AuthService {
             return { ...userExist, ...tokens }
         }
 
-        const user = await this.userService.createByOAuth({email, provider})
-
+        const user = await this.userService.createByOAuth({ email, provider })
+    
         if (!user) {
             throw new HttpException(
                 `Не получилось создать пользователя с почтой ${email} в ${provider.toLowerCase()}`,
@@ -127,8 +127,8 @@ export class AuthService {
         }
 
         const tokens = await this.issueTokens({
-            id: userExist.id,
-            roles: userExist.roles,
+            id: user.id,
+            roles: user.roles,
             fingerprint,
         })
 

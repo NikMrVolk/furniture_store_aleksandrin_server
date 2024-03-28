@@ -182,7 +182,6 @@ export class AuthController {
             .get(`${this.GOOGLE_ACCESS_URL}?access_token=${token}`)
             .pipe(
                 mergeMap(async ({ data }) => {
-                    console.log(data)
                     const { refreshToken, ...response } =
                         await this.authService.oAuth({
                             email: data.email,

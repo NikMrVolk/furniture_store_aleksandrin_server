@@ -14,6 +14,7 @@ export class UserService {
             select: {
                 id: true,
                 name: true,
+                surname: true,
                 email: true,
                 createdAt: true,
                 updatedAt: true,
@@ -58,22 +59,29 @@ export class UserService {
     async createByOAuth({
         email,
         provider,
+        name,
+        surname,
     }: {
         provider: Provider
         email: string
+        name: string
+        surname: string
     }): Promise<User> {
         if (email === process.env.ADMIN_MAIL) {
+            console.log(surname)
             return this.prisma.user.create({
                 data: {
                     email,
                     roles: { set: ['USER', 'ADMIN'] },
                     provider,
+                    name,
+                    surname,
                 },
             })
         }
 
         return this.prisma.user.create({
-            data: { email, provider },
+            data: { email, provider, name, surname },
         })
     }
 }

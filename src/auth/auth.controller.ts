@@ -29,7 +29,7 @@ import { CurrentUser } from './decorators/user.decorator'
 import { SessionsService } from './services/sessions.service'
 import { TokensService } from './services/tokens.service'
 import { HttpService } from '@nestjs/axios'
-import { mergeMap } from 'rxjs'
+import { map, mergeMap } from 'rxjs'
 import { handleTimeoutAndErrors } from 'src/shared/helpers'
 import { Provider } from '@prisma/client'
 
@@ -168,16 +168,21 @@ export class AuthController {
     @Get('google/callback')
     googleAuthCallback(@Req() req: Request, @Res() res: Response) {
         const token = req.user[Tokens.ACCESS_TOKEN_NAME]
-        return res.redirect(`${this.GOOGLE_SUCCESS_URL}?token=${token}`)
+        const name = req.user['name']
+        const surname = req.user['surname']
+        return res.redirect(
+            `${this.GOOGLE_SUCCESS_URL}?token=${token}&name=${name}&surname=${surname}`,
+        )
     }
 
     @HttpCode(200)
     @Get('google/success')
     async googleSuccess(
-        @Query('token') token: string,
+        @Query() user: { token: string; name: string; surname: string },
         @Fingerprint('fingerprint') fingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
+        const { token, name, surname } = user
         return this.httpService
             .get(`${this.GOOGLE_ACCESS_URL}?access_token=${token}`)
             .pipe(
@@ -187,6 +192,8 @@ export class AuthController {
                             email: data.email,
                             fingerprint,
                             provider: Provider.GOOGLE,
+                            name,
+                            surname,
                         })
 
                     await this.sessionsService.createSession({

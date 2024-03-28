@@ -100,10 +100,14 @@ export class AuthService {
         email,
         fingerprint,
         provider,
+        name,
+        surname,
     }: {
         email: string
         fingerprint: string
         provider: Provider
+        name: string
+        surname: string
     }): Promise<IAuthResponse> {
         const userExist = await this.userService.getByEmail(email)
 
@@ -117,8 +121,8 @@ export class AuthService {
             return { ...userExist, ...tokens }
         }
 
-        const user = await this.userService.createByOAuth({ email, provider })
-    
+        const user = await this.userService.createByOAuth({ email, provider, name, surname })
+
         if (!user) {
             throw new HttpException(
                 `Не получилось создать пользователя с почтой ${email} в ${provider.toLowerCase()}`,

@@ -3,8 +3,6 @@ import {
     Controller,
     Get,
     HttpCode,
-    HttpException,
-    HttpStatus,
     Post,
     Query,
     Req,
@@ -22,7 +20,7 @@ import {
     IUserWithoutPassword,
     Tokens,
 } from './auth.types'
-import { Request, response, Response } from 'express'
+import { Request, Response } from 'express'
 import { Access, Google, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
@@ -115,15 +113,15 @@ export class AuthController {
                 refreshTokenFromCookies,
                 fingerprint,
             )
-
-        // Re-refresh refresh token after get new AccessToken
-        // this.authService.addRefreshTokenToResponse(res, refreshToken)
-
-        await this.sessionsService.addNewAccessTokenToDB({
-            refreshTokenFromCookies,
-            userId: response.id,
-            accessToken: response.accessToken,
-        })
+            
+            await this.sessionsService.addNewTokensToDB({
+                oldRefreshToken: refreshTokenFromCookies,
+                refreshToken,
+                userId: response.id,
+                accessToken: response.accessToken,
+            })
+            
+            this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }

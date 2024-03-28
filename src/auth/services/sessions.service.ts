@@ -37,25 +37,27 @@ export class SessionsService {
         })
     }
 
-    async addNewAccessTokenToDB({
+    async addNewTokensToDB({
         userId,
         accessToken,
-        refreshTokenFromCookies,
+        oldRefreshToken,
+        refreshToken,
     }: {
         userId: number
         accessToken: string
-        refreshTokenFromCookies: string
+        oldRefreshToken: string
+        refreshToken: string
     }): Promise<void> {
         const { sessions } = await this.userService.getUserSessions(userId)
 
         const currentSession = sessions.find(
-            (el) => el.refreshToken === refreshTokenFromCookies,
+            (el) => el.refreshToken === oldRefreshToken,
         )
 
         if (currentSession) {
             await this.prisma.session.update({
                 where: { id: currentSession.id },
-                data: { accessToken },
+                data: { accessToken, refreshToken },
             })
         }
     }

@@ -11,6 +11,7 @@ import { SessionsService } from './services/sessions.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { GoogleStrategy } from './strategies/google.strategy'
 import { HttpModule } from '@nestjs/axios'
+import { YandexStrategy } from './strategies/yandex.strategy'
 
 @Module({
     controllers: [AuthController],
@@ -18,6 +19,7 @@ import { HttpModule } from '@nestjs/axios'
         AuthService,
         JwtStrategy,
         GoogleStrategy,
+        YandexStrategy,
         UserService,
         PrismaService,
         TokensService,

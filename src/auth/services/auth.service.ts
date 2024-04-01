@@ -102,12 +102,14 @@ export class AuthService {
         provider,
         name,
         surname,
+        phone,
     }: {
         email: string
         fingerprint: string
         provider: Provider
-        name: string
-        surname: string
+        name?: string | null
+        surname?: string | null
+        phone?: string | null
     }): Promise<IAuthResponse> {
         const userExist = await this.userService.getByEmail(email)
 
@@ -121,7 +123,13 @@ export class AuthService {
             return { ...userExist, ...tokens }
         }
 
-        const user = await this.userService.createByOAuth({ email, provider, name, surname })
+        const user = await this.userService.createByOAuth({
+            email,
+            provider,
+            name,
+            surname,
+            phone,
+        })
 
         if (!user) {
             throw new HttpException(

@@ -20,6 +20,7 @@ export class UserService {
                 updatedAt: true,
                 roles: true,
                 provider: true,
+                phone: true
             },
         })
     }
@@ -61,14 +62,15 @@ export class UserService {
         provider,
         name,
         surname,
+        phone,
     }: {
         provider: Provider
         email: string
-        name: string
-        surname: string
+        name: string | null
+        surname: string | null
+        phone: string | null
     }): Promise<User> {
         if (email === process.env.ADMIN_MAIL) {
-            console.log(surname)
             return this.prisma.user.create({
                 data: {
                     email,
@@ -76,12 +78,13 @@ export class UserService {
                     provider,
                     name,
                     surname,
+                    phone,
                 },
             })
         }
 
         return this.prisma.user.create({
-            data: { email, provider, name, surname },
+            data: { email, provider, name, surname, phone },
         })
     }
 }

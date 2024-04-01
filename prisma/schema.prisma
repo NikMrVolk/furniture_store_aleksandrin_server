@@ -28,6 +28,7 @@ model User {
 
   name    String?
   surname String?
+  phone   String?
 
   roles    Role[]    @default([USER])
   sessions Session[]

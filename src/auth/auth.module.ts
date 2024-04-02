@@ -9,17 +9,12 @@ import { UserService } from './services/user.service'
 import { TokensService } from './services/tokens.service'
 import { SessionsService } from './services/sessions.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
-import { GoogleStrategy } from './strategies/google.strategy'
-import { HttpModule } from '@nestjs/axios'
-import { YandexStrategy } from './strategies/yandex.strategy'
 
 @Module({
     controllers: [AuthController],
     providers: [
         AuthService,
         JwtStrategy,
-        GoogleStrategy,
-        YandexStrategy,
         UserService,
         PrismaService,
         TokensService,
@@ -32,7 +27,13 @@ import { YandexStrategy } from './strategies/yandex.strategy'
             inject: [ConfigService],
             useFactory: getJwtConfig,
         }),
-        HttpModule,
+    ],
+    exports: [
+        AuthService,
+        SessionsService,
+        TokensService,
+        PrismaService,
+        UserService,
     ],
 })
 export class AuthModule {}

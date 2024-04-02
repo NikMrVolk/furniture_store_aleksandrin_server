@@ -6,9 +6,9 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
-import { FingerprintKeys, IJwtPayload, Tokens } from '../auth.types'
 import { UserService } from '../services/user.service'
 import { SessionsService } from '../services/sessions.service'
+import { FingerprintKeys, IJwtPayload, Tokens } from 'src/shared/types/auth.interface'
 
 const throwError = () => {
     throw new UnauthorizedException('Invalid refresh token')

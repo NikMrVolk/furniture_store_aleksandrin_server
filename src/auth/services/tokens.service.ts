@@ -1,8 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { UserService } from './user.service'
 import { JwtService } from '@nestjs/jwt'
-import { IAuthResponse, IJwtPayload, Tokens } from '../auth.types'
 import { Response } from 'express'
+import {
+    IAuthResponse,
+    IJwtPayload,
+    Tokens,
+} from 'src/shared/types/auth.interface'
 
 @Injectable()
 export class TokensService {
@@ -13,18 +17,22 @@ export class TokensService {
         private jwt: JwtService,
     ) {}
 
-    private async issueTokens({ id, fingerprint, roles }: IJwtPayload) {
-        const data = { id, fingerprint, roles }
+    async issueTokens({ id, fingerprint, roles }: IJwtPayload) {
+        try {
+            const data = { id, fingerprint, roles }
 
-        const accessToken = this.jwt.sign(data, {
-            expiresIn: '1h',
-        })
+            const accessToken = this.jwt.sign(data, {
+                expiresIn: '1h',
+            })
 
-        const refreshToken = this.jwt.sign(data, {
-            expiresIn: '15d',
-        })
+            const refreshToken = this.jwt.sign(data, {
+                expiresIn: '15d',
+            })
 
-        return { accessToken, refreshToken }
+            return { accessToken, refreshToken }
+        } catch (e) {
+            console.log('IssueTokens error -', e)
+        }
     }
 
     async getNewTokens(

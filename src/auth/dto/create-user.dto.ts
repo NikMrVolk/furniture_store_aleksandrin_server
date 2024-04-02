@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator'
 
 export class CreateUserDto {
     @IsEmail()
@@ -10,5 +10,6 @@ export class CreateUserDto {
     readonly password: string
 
     @IsString()
+    @IsNotEmpty({message: 'Имя пользователя не может пыть пустым'})
     readonly name: string
 }

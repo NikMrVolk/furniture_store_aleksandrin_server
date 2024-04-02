@@ -3,7 +3,7 @@ import { Provider, Session, User } from '@prisma/client'
 import { PrismaService } from 'src/prisma.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import * as bcrypt from 'bcrypt'
-import { IUserWithoutPassword } from '../auth.types'
+import { IUserWithoutPassword } from 'src/shared/types/auth.interface'
 
 @Injectable()
 export class UserService {
@@ -20,7 +20,7 @@ export class UserService {
                 updatedAt: true,
                 roles: true,
                 provider: true,
-                phone: true
+                phone: true,
             },
         })
     }

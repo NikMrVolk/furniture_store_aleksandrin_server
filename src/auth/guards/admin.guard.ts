@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import { $Enums } from '@prisma/client'
-import { IJwtPayload } from '../auth.types'
+import { IJwtPayload } from 'src/shared/types/auth.interface'
 
 const throwError = () => {
     throw new ForbiddenException('Not enough rights')

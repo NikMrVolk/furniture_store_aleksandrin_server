@@ -1,6 +1,6 @@
 import { ExecutionContext, createParamDecorator } from '@nestjs/common'
-import { FingerprintKeys } from '../auth.types'
 import * as bcrypt from 'bcrypt'
+import { FingerprintKeys } from 'src/shared/types/auth.interface'
 
 interface IFingerprint {
     reqHeadersString: string

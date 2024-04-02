@@ -1,8 +1,5 @@
 import {
-    BadRequestException,
     ConflictException,
-    HttpException,
-    HttpStatus,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -10,20 +7,15 @@ import {
 import { LoginUserDto } from '../dto/login-user.dto'
 import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
-import { JwtService } from '@nestjs/jwt'
 import { CreateUserDto } from '../dto/create-user.dto'
-import { IAuthResponse, IJwt, IJwtPayload } from '../auth.types'
-import { SessionsService } from './sessions.service'
-import { Provider } from '@prisma/client'
+import { IAuthResponse } from 'src/shared/types/auth.interface'
+import { TokensService } from './tokens.service'
 
 @Injectable()
 export class AuthService {
-    EXPIRE_DAY_REFRESH_TOKEN = 15
-
     constructor(
-        private userService: UserService,
-        private jwt: JwtService,
-        private readonly sessionsService: SessionsService,
+        private readonly userService: UserService,
+        private readonly tokensService: TokensService,
     ) {}
 
     async registration(
@@ -39,7 +31,7 @@ export class AuthService {
 
         const { password, ...user } = await this.userService.create(dto)
 
-        const tokens = await this.issueTokens({
+        const tokens = await this.tokensService.issueTokens({
             id: user.id,
             fingerprint,
             roles: user.roles,
@@ -53,7 +45,7 @@ export class AuthService {
         fingerprint: string,
     ): Promise<IAuthResponse> {
         const { password, ...user } = await this.validateUser(dto)
-        const tokens = await this.issueTokens({
+        const tokens = await this.tokensService.issueTokens({
             id: user.id,
             fingerprint,
             roles: user.roles,
@@ -76,74 +68,5 @@ export class AuthService {
             throw new UnauthorizedException('Не верный пароль')
 
         return user
-    }
-
-    private async issueTokens({
-        id,
-        fingerprint,
-        roles,
-    }: IJwtPayload): Promise<IJwt> {
-        const data = { id, fingerprint, roles }
-
-        const accessToken = this.jwt.sign(data, {
-            expiresIn: '1h',
-        })
-
-        const refreshToken = this.jwt.sign(data, {
-            expiresIn: '15d',
-        })
-
-        return { accessToken, refreshToken }
-    }
-
-    async oAuth({
-        email,
-        fingerprint,
-        provider,
-        name,
-        surname,
-        phone,
-    }: {
-        email: string
-        fingerprint: string
-        provider: Provider
-        name?: string | null
-        surname?: string | null
-        phone?: string | null
-    }): Promise<IAuthResponse> {
-        const userExist = await this.userService.getByEmail(email)
-
-        if (userExist) {
-            await this.sessionsService.checkQuantitySessions(userExist.id)
-            const tokens = await this.issueTokens({
-                id: userExist.id,
-                roles: userExist.roles,
-                fingerprint,
-            })
-            return { ...userExist, ...tokens }
-        }
-
-        const user = await this.userService.createByOAuth({
-            email,
-            provider,
-            name,
-            surname,
-            phone,
-        })
-
-        if (!user) {
-            throw new HttpException(
-                `Не получилось создать пользователя с почтой ${email} в ${provider.toLowerCase()}`,
-                HttpStatus.BAD_REQUEST,
-            )
-        }
-
-        const tokens = await this.issueTokens({
-            id: user.id,
-            roles: user.roles,
-            fingerprint,
-        })
-
-        return { ...user, ...tokens }
     }
 }

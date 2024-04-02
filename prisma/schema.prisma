@@ -15,6 +15,7 @@ enum Role {
 enum Provider {
   GOOGLE
   YANDEX
+  MAILRU
 }
 
 model User {

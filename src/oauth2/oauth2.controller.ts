@@ -8,7 +8,7 @@ import { SessionsService } from 'src/auth/services/sessions.service'
 import { TokensService } from 'src/auth/services/tokens.service'
 import { handleTimeoutAndErrors } from 'src/shared/helpers'
 import { OAuth2Service } from './oauth2.service'
-import { Google, Yandex } from './decorators/oauth2.decorator'
+import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
 import { Tokens } from 'src/shared/types/auth.interface'
 
 @Controller('oauth2')
@@ -16,6 +16,7 @@ export class OAuth2Controller {
     private readonly OAUTH_SUCCESS_URL: string
     private readonly GOOGLE_ACCESS_URL: string
     private readonly YANDEX_ACCESS_URL: string
+    private readonly MAILRU_ACCESS_URL: string
 
     constructor(
         private readonly sessionsService: SessionsService,
@@ -27,6 +28,7 @@ export class OAuth2Controller {
         this.GOOGLE_ACCESS_URL =
             'https://www.googleapis.com/oauth2/v3/tokeninfo'
         this.YANDEX_ACCESS_URL = 'https://login.yandex.ru/info'
+        this.MAILRU_ACCESS_URL = 'https://oauth.mail.ru/userinfo'
     }
 
     @HttpCode(200)
@@ -102,7 +104,7 @@ export class OAuth2Controller {
     }
 
     @Get('yandex/success')
-    successYandex(
+    yandexSuccess(
         @Query()
         user: {
             token: string
@@ -126,6 +128,55 @@ export class OAuth2Controller {
                             name,
                             surname,
                             phone,
+                        })
+
+                    await this.sessionsService.createSession({
+                        userId: response.id,
+                        fingerprint,
+                        accessToken: response.accessToken,
+                        refreshToken,
+                    })
+
+                    this.tokensService.addRefreshTokenToResponse(
+                        res,
+                        refreshToken,
+                    )
+
+                    return response
+                }),
+                handleTimeoutAndErrors(),
+            )
+    }
+
+    @Mailru()
+    @Get('mailru')
+    mailruAuth() {}
+
+    @Mailru()
+    @Get('mailru/callback')
+    mailruAuthCallback(@Req() req: Request, @Res() res: Response) {
+        const token = req.user[Tokens.ACCESS_TOKEN_NAME]
+
+        return res.redirect(`${this.OAUTH_SUCCESS_URL}?token=${token}`)
+    }
+
+    @Get('mailru/success')
+    mailruSuccess(
+        @Query('token') token: string,
+        @Fingerprint('fingerprint') fingerprint: string,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        return this.httpService
+            .get(`${this.MAILRU_ACCESS_URL}?access_token=${token}`)
+            .pipe(
+                mergeMap(async ({ data: { email, first_name, last_name } }) => {
+                    const { refreshToken, ...response } =
+                        await this.oAuth2Service.oAuth({
+                            email,
+                            fingerprint,
+                            provider: Provider.YANDEX,
+                            name: first_name,
+                            surname: last_name,
                         })
 
                     await this.sessionsService.createSession({

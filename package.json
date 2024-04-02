@@ -36,6 +36,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
+    "passport-oauth-mail-ru": "^1.0.0",
     "passport-yandex": "^0.0.5",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"

@@ -5,12 +5,16 @@ import { PrismaService } from 'src/prisma.service'
 
 @Injectable()
 export class SessionsService {
-    MAX_SESSIONS_QUANTITY = 3
+    private readonly MAX_SESSIONS_QUANTITY: number
+    private readonly SESSIONS_DURATION_DAYS: number
 
     constructor(
         private prisma: PrismaService,
         private userService: UserService,
-    ) {}
+    ) {
+        this.MAX_SESSIONS_QUANTITY = 3
+        this.SESSIONS_DURATION_DAYS = 15
+    }
 
     async createSession({
         userId,
@@ -24,7 +28,7 @@ export class SessionsService {
         refreshToken: string
     }): Promise<void> {
         const expiresIn = new Date()
-        expiresIn.setDate(expiresIn.getDate() + 15)
+        expiresIn.setDate(expiresIn.getDate() + this.SESSIONS_DURATION_DAYS)
 
         await this.prisma.session.create({
             data: {

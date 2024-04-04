@@ -10,6 +10,7 @@ import { handleTimeoutAndErrors } from 'src/shared/helpers'
 import { OAuth2Service } from './oauth2.service'
 import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
 import { Tokens } from 'src/shared/types/auth.interface'
+import { AuthService } from 'src/auth/services/auth.service'
 
 @Controller('oauth2')
 export class OAuth2Controller {
@@ -23,6 +24,7 @@ export class OAuth2Controller {
         private readonly tokensService: TokensService,
         private readonly httpService: HttpService,
         private readonly oAuth2Service: OAuth2Service,
+        private readonly authService: AuthService,
     ) {
         this.OAUTH_SUCCESS_URL = 'http://localhost:3000/oauth2'
         this.GOOGLE_ACCESS_URL =
@@ -69,16 +71,13 @@ export class OAuth2Controller {
                             surname,
                         })
 
-                    await this.sessionsService.createSession({
-                        userId: response.id,
-                        fingerprint,
-                        accessToken: response.accessToken,
-                        refreshToken,
-                    })
-
-                    this.tokensService.addRefreshTokenToResponse(
-                        res,
-                        refreshToken,
+                    await this.authService.createSessionAndAddRefreshToResponse(
+                        {
+                            response: response,
+                            fingerprint,
+                            refreshToken,
+                            res,
+                        },
                     )
 
                     return response
@@ -130,16 +129,13 @@ export class OAuth2Controller {
                             phone,
                         })
 
-                    await this.sessionsService.createSession({
-                        userId: response.id,
-                        fingerprint,
-                        accessToken: response.accessToken,
-                        refreshToken,
-                    })
-
-                    this.tokensService.addRefreshTokenToResponse(
-                        res,
-                        refreshToken,
+                    await this.authService.createSessionAndAddRefreshToResponse(
+                        {
+                            response: response,
+                            fingerprint,
+                            refreshToken,
+                            res,
+                        },
                     )
 
                     return response
@@ -179,16 +175,13 @@ export class OAuth2Controller {
                             surname: last_name,
                         })
 
-                    await this.sessionsService.createSession({
-                        userId: response.id,
-                        fingerprint,
-                        accessToken: response.accessToken,
-                        refreshToken,
-                    })
-
-                    this.tokensService.addRefreshTokenToResponse(
-                        res,
-                        refreshToken,
+                    await this.authService.createSessionAndAddRefreshToResponse(
+                        {
+                            response: response,
+                            fingerprint,
+                            refreshToken,
+                            res,
+                        },
                     )
 
                     return response

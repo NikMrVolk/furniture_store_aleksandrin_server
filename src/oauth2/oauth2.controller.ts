@@ -18,7 +18,7 @@ export class OAuth2Controller {
         private readonly oAuth2Service: OAuth2Service,
         private readonly authService: AuthService,
     ) {
-        this.OAUTH_SUCCESS_URL = 'http://localhost:3000/oauth2'
+        this.OAUTH_SUCCESS_URL = `${process.env.CLIENT_URL}oauth2`
         this.GOOGLE_ACCESS_URL =
             'https://www.googleapis.com/oauth2/v3/tokeninfo'
         this.YANDEX_ACCESS_URL = 'https://login.yandex.ru/info'

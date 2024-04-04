@@ -1,9 +1,12 @@
+import { HttpService } from '@nestjs/axios'
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { Provider } from '@prisma/client'
+import { firstValueFrom } from 'rxjs'
 import { SessionsService } from 'src/auth/services/sessions.service'
 import { TokensService } from 'src/auth/services/tokens.service'
 import { UserService } from 'src/auth/services/user.service'
-import { IAuthResponse } from 'src/shared/types/auth.interface'
+import { handleTimeoutAndErrors } from 'src/shared/helpers'
+import { IAuthResponse, IOAuth } from 'src/shared/types/auth.interface'
 
 @Injectable()
 export class OAuth2Service {
@@ -11,9 +14,43 @@ export class OAuth2Service {
         private userService: UserService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
+        private readonly httpService: HttpService,
     ) {}
 
-    async oAuth({
+    public async oAuth({ url, user, fingerprint, provider }: IOAuth) {
+        const {
+            data: { email, default_email, first_name, last_name },
+        } = await this.getUserData({
+            url,
+            token: user.token,
+        })
+
+        return await this.findOrCreate({
+            email: email ?? default_email,
+            fingerprint,
+            provider,
+            name: first_name ?? user?.name,
+            surname: last_name ?? user?.name,
+            phone: user?.phone,
+        })
+    }
+
+    private async getUserData({ url, token }: { url: string; token: string }) {
+        const userData = await firstValueFrom(
+            this.httpService
+                .get(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                })
+                .pipe(handleTimeoutAndErrors()),
+        )
+
+        return userData
+    }
+
+    private async findOrCreate({
         email,
         fingerprint,
         provider,

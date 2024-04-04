@@ -1,15 +1,10 @@
-import { HttpService } from '@nestjs/axios'
 import { Controller, Get, HttpCode, Query, Req, Res } from '@nestjs/common'
 import { Provider } from '@prisma/client'
 import { Request, Response } from 'express'
-import { mergeMap } from 'rxjs'
 import { Fingerprint } from 'src/auth/decorators/fingerprint.decorator'
-import { SessionsService } from 'src/auth/services/sessions.service'
-import { TokensService } from 'src/auth/services/tokens.service'
-import { handleTimeoutAndErrors } from 'src/shared/helpers'
 import { OAuth2Service } from './oauth2.service'
 import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
-import { Tokens } from 'src/shared/types/auth.interface'
+import { IOAuth, IQueryUser, Tokens } from 'src/shared/types/auth.interface'
 import { AuthService } from 'src/auth/services/auth.service'
 
 @Controller('oauth2')
@@ -20,9 +15,6 @@ export class OAuth2Controller {
     private readonly MAILRU_ACCESS_URL: string
 
     constructor(
-        private readonly sessionsService: SessionsService,
-        private readonly tokensService: TokensService,
-        private readonly httpService: HttpService,
         private readonly oAuth2Service: OAuth2Service,
         private readonly authService: AuthService,
     ) {
@@ -53,37 +45,17 @@ export class OAuth2Controller {
     @HttpCode(200)
     @Get('google/success')
     async googleSuccess(
-        @Query() user: { token: string; name: string; surname: string },
+        @Query() user: IQueryUser,
         @Fingerprint('fingerprint') fingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const { token, name, surname } = user
-        return this.httpService
-            .get(`${this.GOOGLE_ACCESS_URL}?access_token=${token}`)
-            .pipe(
-                mergeMap(async ({ data: { email } }) => {
-                    const { refreshToken, ...response } =
-                        await this.oAuth2Service.oAuth({
-                            email,
-                            fingerprint,
-                            provider: Provider.GOOGLE,
-                            name,
-                            surname,
-                        })
-
-                    await this.authService.createSessionAndAddRefreshToResponse(
-                        {
-                            response: response,
-                            fingerprint,
-                            refreshToken,
-                            res,
-                        },
-                    )
-
-                    return response
-                }),
-                handleTimeoutAndErrors(),
-            )
+        return await this.oAuthAndResponse({
+            url: this.GOOGLE_ACCESS_URL,
+            user,
+            fingerprint,
+            res,
+            provider: Provider.GOOGLE,
+        })
     }
 
     @Yandex()
@@ -103,45 +75,18 @@ export class OAuth2Controller {
     }
 
     @Get('yandex/success')
-    yandexSuccess(
-        @Query()
-        user: {
-            token: string
-            name: string | null
-            surname: string | null
-            phone: string | null
-        },
+    async yandexSuccess(
+        @Query() user: IQueryUser,
         @Fingerprint('fingerprint') fingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const { token, name, surname, phone } = user
-        return this.httpService
-            .get(`${this.YANDEX_ACCESS_URL}?oauth_token=${token}`)
-            .pipe(
-                mergeMap(async ({ data: { default_email } }) => {
-                    const { refreshToken, ...response } =
-                        await this.oAuth2Service.oAuth({
-                            email: default_email,
-                            fingerprint,
-                            provider: Provider.YANDEX,
-                            name,
-                            surname,
-                            phone,
-                        })
-
-                    await this.authService.createSessionAndAddRefreshToResponse(
-                        {
-                            response: response,
-                            fingerprint,
-                            refreshToken,
-                            res,
-                        },
-                    )
-
-                    return response
-                }),
-                handleTimeoutAndErrors(),
-            )
+        return await this.oAuthAndResponse({
+            url: this.YANDEX_ACCESS_URL,
+            user,
+            fingerprint,
+            res,
+            provider: Provider.YANDEX,
+        })
     }
 
     @Mailru()
@@ -157,36 +102,43 @@ export class OAuth2Controller {
     }
 
     @Get('mailru/success')
-    mailruSuccess(
-        @Query('token') token: string,
+    async mailruSuccess(
+        @Query() user: IQueryUser,
         @Fingerprint('fingerprint') fingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
-        return this.httpService
-            .get(`${this.MAILRU_ACCESS_URL}?access_token=${token}`)
-            .pipe(
-                mergeMap(async ({ data: { email, first_name, last_name } }) => {
-                    const { refreshToken, ...response } =
-                        await this.oAuth2Service.oAuth({
-                            email,
-                            fingerprint,
-                            provider: Provider.YANDEX,
-                            name: first_name,
-                            surname: last_name,
-                        })
+        const url = this.MAILRU_ACCESS_URL + '?access_token=' + user.token
 
-                    await this.authService.createSessionAndAddRefreshToResponse(
-                        {
-                            response: response,
-                            fingerprint,
-                            refreshToken,
-                            res,
-                        },
-                    )
+        return await this.oAuthAndResponse({
+            url,
+            user,
+            fingerprint,
+            res,
+            provider: Provider.MAILRU,
+        })
+    }
 
-                    return response
-                }),
-                handleTimeoutAndErrors(),
-            )
+    private async oAuthAndResponse({
+        url,
+        user,
+        fingerprint,
+        provider,
+        res,
+    }: IOAuth & { res: Response }) {
+        const { refreshToken, ...response } = await this.oAuth2Service.oAuth({
+            url,
+            user,
+            fingerprint,
+            provider,
+        })
+
+        await this.authService.createSessionAndAddRefreshToResponse({
+            response: response,
+            fingerprint,
+            refreshToken,
+            res,
+        })
+
+        return response
     }
 }

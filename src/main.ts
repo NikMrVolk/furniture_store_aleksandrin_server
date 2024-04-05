@@ -10,7 +10,7 @@ const start = async () => {
         app.setGlobalPrefix('api')
         app.use(cookieParser())
         app.enableCors({
-            origin: [process.env.CLIENT_URL],
+            origin: [/https:\/\/[a-z0-9\.]*onrender\.com/],
             credentials: true,
             exposedHeaders: 'set-cookie',
         })

@@ -8,12 +8,12 @@ const start = async () => {
         const app = await NestFactory.create(AppModule)
 
         app.setGlobalPrefix('api')
-        app.use(cookieParser())
         app.enableCors({
-            origin: [/https:\/\/[a-z0-9\.]*onrender\.com/],
+            origin: process.env.CLIENT_URL,
             credentials: true,
             exposedHeaders: 'set-cookie',
         })
+        app.use(cookieParser())
 
         await app.listen(PORT, () =>
             console.log(`App started work on port ${PORT}`),

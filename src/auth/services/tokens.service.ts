@@ -65,7 +65,7 @@ export class TokensService {
 
         res.cookie(Tokens.REFRESH_TOKEN_NAME, refreshToken, {
             httpOnly: true,
-            domain: process.env.CLIENT_DOMAIN,
+            domain: process.env.CLIENT_URL,
             expires: expiresIn,
             secure: true,
             sameSite: process.env.COOKIE_SAME_SITE as 'none' | 'lax',
@@ -75,7 +75,7 @@ export class TokensService {
     removeRefreshTokenFromResponse(res: Response) {
         res.cookie(Tokens.REFRESH_TOKEN_NAME, '', {
             httpOnly: true,
-            domain: process.env.CLIENT_DOMAIN,
+            domain: process.env.CLIENT_URL,
             expires: new Date(0),
             secure: true,
             sameSite: process.env.COOKIE_SAME_SITE as 'none' | 'lax',

@@ -4,7 +4,7 @@ import * as cookieParser from 'cookie-parser'
 
 const start = async () => {
     try {
-        const PORT = process.env.PORT || 4000
+        const PORT = process.env.PORT
         const app = await NestFactory.create(AppModule)
 
         app.setGlobalPrefix('api')

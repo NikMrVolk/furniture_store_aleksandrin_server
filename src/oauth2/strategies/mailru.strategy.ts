@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
+import { Provider } from '@prisma/client'
 import { Request } from 'express'
 import { ParamsDictionary } from 'express-serve-static-core'
 import { StrategyCreated, StrategyCreatedStatic } from 'passport'
@@ -12,7 +13,7 @@ export class MailruStrategy extends PassportStrategy(Strategy, 'mailru') {
         super({
             clientID: process.env.MAILRU_APP_ID,
             clientSecret: process.env.MAILRU_APP_SECRET,
-            callbackURL: process.env.MAILRU_CALLBACK_URL,
+            callbackURL: `${process.env.SERVER_URL}/api/oauth2/${Provider.MAILRU.toLowerCase()}/callback`,
         })
     }
 

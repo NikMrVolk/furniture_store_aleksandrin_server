@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
+import { Provider } from '@prisma/client'
 import { Strategy } from 'passport-yandex'
 
 @Injectable()
@@ -8,7 +9,7 @@ export class YandexStrategy extends PassportStrategy(Strategy, 'yandex') {
         super({
             clientID: process.env.YANDEX_APP_ID,
             clientSecret: process.env.YANDEX_APP_SECRET,
-            callbackURL: process.env.YANDEX_CALLBACK_URL,
+            callbackURL: `${process.env.SERVER_URL}/api/oauth2/${Provider.YANDEX.toLowerCase()}/callback`,
         })
     }
 

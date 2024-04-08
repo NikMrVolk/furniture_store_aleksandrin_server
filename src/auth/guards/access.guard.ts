@@ -6,9 +6,9 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
-import { UserService } from '../services/user.service'
 import { SessionsService } from '../services/sessions.service'
 import { FingerprintKeys, IJwtPayload } from 'src/shared/types/auth.interface'
+import { UserService } from 'src/user/user.service'
 
 const throwError = () => {
     throw new UnauthorizedException('Invalid access token')

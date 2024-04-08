@@ -11,7 +11,6 @@ import {
     ValidationPipe,
 } from '@nestjs/common'
 import { AuthService } from './services/auth.service'
-import { UserService } from './services/user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { LoginUserDto } from './dto/login-user.dto'
 import { Request, Response } from 'express'
@@ -25,6 +24,7 @@ import {
     IUserWithoutPassword,
     Tokens,
 } from 'src/shared/types/auth.interface'
+import { UserService } from 'src/user/user.service'
 
 @Controller('auth')
 export class AuthController {

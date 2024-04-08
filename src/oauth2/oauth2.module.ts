@@ -6,10 +6,11 @@ import { AuthModule } from 'src/auth/auth.module'
 import { GoogleStrategy } from './strategies/google.strategy'
 import { YandexStrategy } from './strategies/yandex.strategy'
 import { MailruStrategy } from './strategies/mailru.strategy'
+import { UserModule } from 'src/user/user.module'
 
 @Module({
     controllers: [OAuth2Controller],
     providers: [OAuth2Service, GoogleStrategy, YandexStrategy, MailruStrategy],
-    imports: [HttpModule, AuthModule],
+    imports: [HttpModule, AuthModule, UserModule],
 })
 export class OAuth2Module {}

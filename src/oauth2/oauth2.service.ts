@@ -4,9 +4,9 @@ import { Provider } from '@prisma/client'
 import { firstValueFrom } from 'rxjs'
 import { SessionsService } from 'src/auth/services/sessions.service'
 import { TokensService } from 'src/auth/services/tokens.service'
-import { UserService } from 'src/auth/services/user.service'
 import { handleTimeoutAndErrors } from 'src/shared/helpers'
 import { IAuthResponse, IOAuth } from 'src/shared/types/auth.interface'
+import { UserService } from 'src/user/user.service'
 
 @Injectable()
 export class OAuth2Service {

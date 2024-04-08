@@ -5,7 +5,6 @@ import {
     UnauthorizedException,
 } from '@nestjs/common'
 import { LoginUserDto } from '../dto/login-user.dto'
-import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { CreateUserDto } from '../dto/create-user.dto'
 import {
@@ -15,6 +14,7 @@ import {
 import { TokensService } from './tokens.service'
 import { SessionsService } from './sessions.service'
 import { Response } from 'express'
+import { UserService } from 'src/user/user.service'
 
 @Injectable()
 export class AuthService {

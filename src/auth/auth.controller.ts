@@ -25,7 +25,6 @@ import {
     IUserWithoutPassword,
     Tokens,
 } from 'src/shared/types/auth.interface'
-import { MailService } from 'src/mail/mail.service'
 
 @Controller('auth')
 export class AuthController {
@@ -34,7 +33,6 @@ export class AuthController {
         private readonly userService: UserService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
-        private readonly mailService: MailService,
     ) {}
 
     @UsePipes(new ValidationPipe())
@@ -47,8 +45,6 @@ export class AuthController {
     ): Promise<IAuthResponseWithoutRefresh> {
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
-
-        await this.mailService.sendMail(dto.email, 'sdf', 'sdfa')
 
         await this.authService.createSessionAndAddRefreshToResponse({
             response: response,

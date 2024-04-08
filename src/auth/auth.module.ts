@@ -9,7 +9,6 @@ import { UserService } from './services/user.service'
 import { TokensService } from './services/tokens.service'
 import { SessionsService } from './services/sessions.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
-import { MailService } from 'src/mail/mail.service'
 
 @Module({
     controllers: [AuthController],
@@ -20,7 +19,6 @@ import { MailService } from 'src/mail/mail.service'
         PrismaService,
         TokensService,
         SessionsService,
-        MailService,
     ],
     imports: [
         ConfigModule,

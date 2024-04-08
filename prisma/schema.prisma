@@ -31,9 +31,8 @@ model User {
   surname String?
   phone   String?
 
-  roles      Role[]          @default([USER])
-  sessions   Session[]
-  activation UserActivation?
+  roles    Role[]    @default([USER])
+  sessions Session[]
 }
 
 model Session {
@@ -48,16 +47,4 @@ model Session {
   accessToken  String   @map("access_token")
   fingerprint  String
   expiresIn    DateTime @map("expires_in")
-}
-
-model UserActivation {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  userId Int  @unique @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
-
-  isActivated    Boolean @map("is_activated")
-  activationLink String @map("activation_link")
 }

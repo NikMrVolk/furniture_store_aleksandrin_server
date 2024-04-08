@@ -18,6 +18,13 @@ enum Provider {
   MAILRU
 }
 
+enum OrderStatus {
+  IN_PROCESSING
+  PREPARING_FOR_SHIPMENT
+  ON_THE_WAY
+  COMPLETED
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
@@ -27,12 +34,38 @@ model User {
   password String?
   provider Provider?
 
+  roles    Role[]    @default([USER])
+  sessions Session[]
+
   name    String?
   surname String?
   phone   String?
 
-  roles    Role[]    @default([USER])
-  sessions Session[]
+  cart        Cart?
+  favourite   Favourite?
+  userAddress UserAddress?
+  orders      Order[]
+
+  @@map("users")
+}
+
+model UserAddress {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  locality  String
+  street    String
+  house     String
+  entrance  String?
+  floor     String?
+  apartment String?
+  doorphone String?
+
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("user_addresses")
 }
 
 model Session {
@@ -40,11 +73,196 @@ model Session {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId Int
+  userId Int  @map("user_id")
   user   User @relation(fields: [userId], references: [id])
 
   refreshToken String   @map("refresh_token")
   accessToken  String   @map("access_token")
   fingerprint  String
   expiresIn    DateTime @map("expires_in")
+
+  @@map("sessions")
+}
+
+model Cart {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  cartItems CartItem[]
+
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  quantity Int
+
+  cartId Int  @map("cart_id")
+  cart   Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  itemId Int  @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  @@map("cart_items")
+}
+
+model Favourite {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  favouriteItem FavouriteItem[]
+
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("favourites")
+}
+
+model FavouriteItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  itemId Int  @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  favouriteId Int       @map("favourite_id")
+  favourite   Favourite @relation(fields: [favouriteId], references: [id])
+
+  @@map("favourite_items")
+}
+
+model Item {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  info            ItemInfo?
+  characteristics ItemCharacteristic[]
+
+  cartItem       CartItem[]
+  favouriteItems FavouriteItem[]
+  orderItems     OrderItem[]
+
+  brandId Int    @map("brand_id")
+  brand   Brand? @relation(fields: [brandId], references: [id])
+  typeId  Int    @map("type_id")
+  type    Type?  @relation(fields: [typeId], references: [id])
+
+  @@map("items")
+}
+
+model ItemInfo {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  count       Int
+  title       String
+  description String?
+  price       String
+  images      String[]
+  isStock     Boolean  @map("is_stock")
+  isArchive   Boolean  @map("is_archive")
+
+  itemId Int  @unique @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  @@map("items_info")
+}
+
+model ItemCharacteristic {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  itemId Int  @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  @@map("item_characteristics")
+}
+
+model Brand {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  title String
+
+  items Item[]
+
+  @@map("brands")
+}
+
+model Type {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  parentTypeId Int @map("parent_type_id")
+
+  title String
+  image String?
+  icon  String?
+
+  items Item[]
+
+  @@map("types")
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  totalCount      String           @map("total_count")
+  ShippingAddress ShippingAddress?
+  status          OrderStatus
+  orderItems      OrderItem[]
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  itemId Int  @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  orderId Int   @map("order_id")
+  order   Order @relation(fields: [orderId], references: [id])
+
+  @@map("order_items")
+}
+
+model ShippingAddress {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  locality  String
+  street    String
+  house     String
+  entrance  String?
+  floor     String?
+  apartment String?
+  doorphone String?
+
+  orderId Int   @unique @map("order_id")
+  order   Order @relation(fields: [orderId], references: [id])
+
+  @@map("shipping_address")
 }

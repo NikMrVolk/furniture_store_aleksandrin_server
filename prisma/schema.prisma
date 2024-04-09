@@ -42,7 +42,7 @@ model User {
   phone   String?
 
   cart        Cart?
-  favourite   Favourite?
+  favorite    Favorite?
   userAddress UserAddress?
   orders      Order[]
 
@@ -113,20 +113,20 @@ model CartItem {
   @@map("cart_items")
 }
 
-model Favourite {
+model Favorite {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  favouriteItem FavouriteItem[]
+  favoriteItem FavoriteItem[]
 
   userId Int  @unique @map("user_id")
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("favourites")
+  @@map("favorites")
 }
 
-model FavouriteItem {
+model FavoriteItem {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
@@ -134,10 +134,10 @@ model FavouriteItem {
   itemId Int  @map("item_id")
   item   Item @relation(fields: [itemId], references: [id])
 
-  favouriteId Int       @map("favourite_id")
-  favourite   Favourite @relation(fields: [favouriteId], references: [id])
+  favoriteId Int      @map("favorite_id")
+  favorite   Favorite @relation(fields: [favoriteId], references: [id])
 
-  @@map("favourite_items")
+  @@map("favorite_items")
 }
 
 model Item {
@@ -148,9 +148,9 @@ model Item {
   info            ItemInfo?
   characteristics ItemCharacteristic[]
 
-  cartItem       CartItem[]
-  favouriteItems FavouriteItem[]
-  orderItems     OrderItem[]
+  cartItem      CartItem[]
+  favoriteItems FavoriteItem[]
+  orderItems    OrderItem[]
 
   brandId Int    @map("brand_id")
   brand   Brand? @relation(fields: [brandId], references: [id])

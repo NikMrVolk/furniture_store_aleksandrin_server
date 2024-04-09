@@ -54,13 +54,13 @@ export class UserService {
                     ...data,
                     roles: { set: ['USER', 'ADMIN'] },
                     cart: { create: {} },
-                    favourite: { create: {} },
+                    favorite: { create: {} },
                 },
             })
         }
 
         return this.prisma.user.create({
-            data: { ...data, cart: { create: {} }, favourite: { create: {} } },
+            data: { ...data, cart: { create: {} }, favorite: { create: {} } },
         })
     }
 
@@ -77,7 +77,7 @@ export class UserService {
                     ...oAuthData,
                     roles: { set: ['USER', 'ADMIN'] },
                     cart: { create: {} },
-                    favourite: { create: {} },
+                    favorite: { create: {} },
                 },
             })
         }
@@ -86,7 +86,7 @@ export class UserService {
             data: {
                 ...oAuthData,
                 cart: { create: {} },
-                favourite: { create: {} },
+                favorite: { create: {} },
             },
         })
     }

@@ -50,11 +50,18 @@ export class UserService {
 
         if (data.email === process.env.ADMIN_MAIL) {
             return this.prisma.user.create({
-                data: { ...data, roles: { set: ['USER', 'ADMIN'] } },
+                data: {
+                    ...data,
+                    roles: { set: ['USER', 'ADMIN'] },
+                    cart: { create: {} },
+                    favourite: { create: {} },
+                },
             })
         }
 
-        return this.prisma.user.create({ data })
+        return this.prisma.user.create({
+            data: { ...data, cart: { create: {} }, favourite: { create: {} } },
+        })
     }
 
     async createByOAuth(oAuthData: {
@@ -69,12 +76,18 @@ export class UserService {
                 data: {
                     ...oAuthData,
                     roles: { set: ['USER', 'ADMIN'] },
+                    cart: { create: {} },
+                    favourite: { create: {} },
                 },
             })
         }
 
         return this.prisma.user.create({
-            data: oAuthData,
+            data: {
+                ...oAuthData,
+                cart: { create: {} },
+                favourite: { create: {} },
+            },
         })
     }
 }

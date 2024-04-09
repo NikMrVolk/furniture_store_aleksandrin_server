@@ -57,34 +57,24 @@ export class UserService {
         return this.prisma.user.create({ data })
     }
 
-    async createByOAuth({
-        email,
-        provider,
-        name,
-        surname,
-        phone,
-    }: {
+    async createByOAuth(oAuthData: {
         provider: Provider
         email: string
         name: string | null
         surname: string | null
         phone: string | null
     }): Promise<User> {
-        if (email === process.env.ADMIN_MAIL) {
+        if (oAuthData.email === process.env.ADMIN_MAIL) {
             return this.prisma.user.create({
                 data: {
-                    email,
+                    ...oAuthData,
                     roles: { set: ['USER', 'ADMIN'] },
-                    provider,
-                    name,
-                    surname,
-                    phone,
                 },
             })
         }
 
         return this.prisma.user.create({
-            data: { email, provider, name, surname, phone },
+            data: oAuthData,
         })
     }
 }

@@ -74,7 +74,7 @@ model Session {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   userId Int  @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   refreshToken String   @map("refresh_token")
   accessToken  String   @map("access_token")

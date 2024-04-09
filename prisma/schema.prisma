@@ -41,31 +41,12 @@ model User {
   surname String?
   phone   String?
 
-  cart        Cart?
-  favorite    Favorite?
-  userAddress UserAddress?
-  orders      Order[]
+  cart     Cart?
+  favorite Favorite?
+  address  Address?  @relation("UserAddress", map: "user_address")
+  orders   Order[]
 
   @@map("users")
-}
-
-model UserAddress {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  locality  String
-  street    String
-  house     String
-  entrance  String?
-  floor     String?
-  apartment String?
-  doorphone String?
-
-  userId Int  @unique @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
-
-  @@map("user_addresses")
 }
 
 model Session {
@@ -223,10 +204,11 @@ model Order {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  totalCount      String           @map("total_count")
-  ShippingAddress ShippingAddress?
-  status          OrderStatus
-  orderItems      OrderItem[]
+  totalCount String      @map("total_count")
+  status     OrderStatus
+
+  orderItems OrderItem[]
+  address    Address?    @relation("OrderAddress", map: "order_address")
 
   userId Int  @map("user_id")
   user   User @relation(fields: [userId], references: [id])
@@ -248,7 +230,7 @@ model OrderItem {
   @@map("order_items")
 }
 
-model ShippingAddress {
+model Address {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
@@ -261,8 +243,9 @@ model ShippingAddress {
   apartment String?
   doorphone String?
 
-  orderId Int   @unique @map("order_id")
-  order   Order @relation(fields: [orderId], references: [id])
+  orderId Int?   @unique @map("order_id")
+  order   Order? @relation("OrderAddress", fields: [orderId], references: [id])
 
-  @@map("shipping_address")
+  userId Int?  @unique @map("user_id")
+  user   User? @relation("UserAddress", fields: [userId], references: [id])
 }

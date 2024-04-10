@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     ConflictException,
     Injectable,
     NotFoundException,
@@ -17,6 +18,8 @@ import { UserService } from 'src/user/user.service'
 import { SessionsService } from 'src/sessions/sessions.service'
 import { PrismaService } from 'src/prisma.service'
 import { MailService } from 'src/mail/mail.service'
+import { issueActivationCode } from 'src/shared/helpers'
+import { UserActivation } from '@prisma/client'
 
 @Injectable()
 export class AuthService {
@@ -44,8 +47,12 @@ export class AuthService {
         fingerprint: string,
     ): Promise<IAuthResponse> {
         await this.checkOldUser(dto.email)
+        await this.checkActivationCode({
+            email: dto.email,
+            activationCode: dto.activationCode,
+        })
 
-        const { password, ...user } = await this.userService.create(dto)
+        const user = await this.userService.create(dto)
 
         const tokens = await this.tokensService.issueTokens({
             id: user.id,
@@ -122,16 +129,18 @@ export class AuthService {
             )
     }
 
+    private async getOldActivationDate(email: string): Promise<UserActivation> {
+        return await this.prisma.userActivation.findUnique({
+            where: { email },
+        })
+    }
+
     private async generateAndSaveActivationCode(
         email: string,
     ): Promise<string> {
-        const activationCode = Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, '0')
+        const activationCode = issueActivationCode()
 
-        const oldActivationData = await this.prisma.userActivation.findUnique({
-            where: { email },
-        })
+        const oldActivationData = await this.getOldActivationDate(email)
 
         if (oldActivationData) {
             await this.prisma.userActivation.update({
@@ -150,5 +159,64 @@ export class AuthService {
         }
 
         return activationCode
+    }
+
+    private async handlingLargeAttempts({
+        oldActivationData,
+        email,
+    }: {
+        oldActivationData: UserActivation
+        email: string
+    }): Promise<void> {
+        const newActivationCode = issueActivationCode()
+
+        await this.prisma.userActivation.update({
+            where: { id: oldActivationData.id },
+            data: {
+                activationCode: newActivationCode,
+                activationAttempts: 0,
+            },
+        })
+
+        this.mailService.sendActivationCode({
+            email,
+            activationCode: newActivationCode,
+        })
+
+        throw new BadRequestException(
+            `На почту ${email} выслан новый код активации`,
+        )
+    }
+
+    private async checkActivationCode({
+        email,
+        activationCode,
+    }: {
+        email: string
+        activationCode: string
+    }): Promise<void> {
+        const oldActivationData = await this.getOldActivationDate(email)
+
+        if (oldActivationData.activationCode !== activationCode) {
+            if (oldActivationData.activationAttempts >= 3) {
+                await this.handlingLargeAttempts({ oldActivationData, email })
+            }
+
+            await this.prisma.userActivation.update({
+                where: { id: oldActivationData.id },
+                data: {
+                    activationAttempts:
+                        oldActivationData.activationAttempts + 1,
+                },
+            })
+
+            throw new BadRequestException(
+                `Не верный код активации. Повторите попытку`,
+            )
+        }
+
+        await this.prisma.userActivation.delete({
+            where: { id: oldActivationData.id },
+        })
     }
 }

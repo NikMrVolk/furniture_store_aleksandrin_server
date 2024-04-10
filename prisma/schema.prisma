@@ -33,7 +33,7 @@ model UserActivation {
 
   email             String @unique
   activationCode    String @map("activation_code")
-  activationAttempt Int    @default(0) @map("activation_attempt")
+  activationAttempts Int    @default(0) @map("activation_attempt")
 
   @@map("user_activations")
 }

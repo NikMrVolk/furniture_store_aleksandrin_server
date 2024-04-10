@@ -1,15 +1,8 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator'
+import { IsString, Length } from 'class-validator'
+import { CheckMailDto } from './check-mail.dto'
 
-export class CreateUserDto {
-    @IsEmail()
-    readonly email: string
-
-    @MinLength(9, {
-        message: 'Пароль должен быть больше 8 символов',
-    })
-    readonly password: string
-
+export class CreateUserDto extends CheckMailDto {
     @IsString()
-    @IsNotEmpty({message: 'Имя пользователя не может пыть пустым'})
-    readonly name: string
+    @Length(4, 4, { message: 'Код активации должен состоять из 4 цифр' })
+    readonly activationCode: string
 }

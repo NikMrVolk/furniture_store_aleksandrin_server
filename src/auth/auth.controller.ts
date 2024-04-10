@@ -23,6 +23,7 @@ import {
     Tokens,
 } from 'src/shared/types/auth.interface'
 import { SessionsService } from 'src/sessions/sessions.service'
+import { CheckMailDto } from './dto/check-mail.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -35,7 +36,7 @@ export class AuthController {
     @UsePipes(new ValidationPipe())
     @HttpCode(200)
     @Post('check-mail')
-    async checkMail(@Body() dto: CreateUserDto) {
+    async checkMail(@Body() dto: CheckMailDto) {
         await this.authService.checkMail(dto.email)
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -53,7 +54,7 @@ export class AuthController {
             await this.authService.registration(dto, fingerprint)
 
         await this.authService.createSessionAndAddRefreshToResponse({
-            response: response,
+            response,
             fingerprint,
             refreshToken,
             res,

@@ -1,11 +1,6 @@
-import { IsEmail, IsString, MinLength } from 'class-validator'
+import { IsEmail } from 'class-validator'
 
 export class LoginUserDto {
-    @IsEmail()
+    @IsEmail({}, { message: 'Проверьте введённую почту' })
     readonly email: string
-
-    @MinLength(9, {
-        message: 'Пароль должен быть больше 8 символов',
-    })
-    readonly password: string
 }

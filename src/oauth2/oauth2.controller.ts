@@ -5,7 +5,7 @@ import { Fingerprint } from 'src/auth/decorators/fingerprint.decorator'
 import { OAuth2Service } from './oauth2.service'
 import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
 import { IOAuth, IQueryUser, Tokens } from 'src/shared/types/auth.interface'
-import { AuthService } from 'src/auth/services/auth.service'
+import { AuthController } from 'src/auth/auth.controller'
 
 @Controller('oauth2')
 export class OAuth2Controller {
@@ -16,7 +16,7 @@ export class OAuth2Controller {
 
     constructor(
         private readonly oAuth2Service: OAuth2Service,
-        private readonly authService: AuthService,
+        private readonly authController: AuthController,
     ) {
         this.OAUTH_SUCCESS_URL = `${process.env.CLIENT_URL}/oauth2`
         this.GOOGLE_ACCESS_URL =
@@ -132,7 +132,7 @@ export class OAuth2Controller {
             provider,
         })
 
-        await this.authService.createSessionAndAddRefreshToResponse({
+        await this.authController.createSessionAndAddRefreshToResponse({
             response: response,
             fingerprint,
             refreshToken,

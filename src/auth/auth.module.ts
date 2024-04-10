@@ -13,7 +13,13 @@ import { MailModule } from 'src/mail/mail.module'
 
 @Module({
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, PrismaService, TokensService],
+    providers: [
+        AuthService,
+        JwtStrategy,
+        PrismaService,
+        TokensService,
+        AuthController,
+    ],
     imports: [
         ConfigModule,
         JwtModule.registerAsync({
@@ -23,8 +29,8 @@ import { MailModule } from 'src/mail/mail.module'
         }),
         UserModule,
         SessionsModule,
-        MailModule
+        MailModule,
     ],
-    exports: [AuthService, TokensService],
+    exports: [AuthService, TokensService, AuthController],
 })
 export class AuthModule {}

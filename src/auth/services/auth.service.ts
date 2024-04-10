@@ -4,14 +4,9 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common'
-import {
-    IAuthResponse,
-    IAuthResponseWithoutRefresh,
-} from 'src/shared/types/auth.interface'
+import { IAuthResponse } from 'src/shared/types/auth.interface'
 import { TokensService } from './tokens.service'
-import { Response } from 'express'
 import { UserService } from 'src/user/user.service'
-import { SessionsService } from 'src/sessions/sessions.service'
 import { PrismaService } from 'src/prisma.service'
 import { MailService } from 'src/mail/mail.service'
 import { issueActivationCode } from 'src/shared/helpers'
@@ -23,7 +18,6 @@ export class AuthService {
     constructor(
         private readonly userService: UserService,
         private readonly tokensService: TokensService,
-        private readonly sessionsService: SessionsService,
         private readonly prisma: PrismaService,
         private readonly mailService: MailService,
     ) {}
@@ -87,33 +81,6 @@ export class AuthService {
         })
 
         return { ...user, ...tokens }
-    }
-
-    async createSessionAndAddRefreshToResponse({
-        response,
-        fingerprint,
-        refreshToken,
-        res,
-        isCheckQuantitySessions = false,
-    }: {
-        response: IAuthResponseWithoutRefresh
-        fingerprint: string
-        refreshToken: string
-        res: Response
-        isCheckQuantitySessions?: boolean
-    }): Promise<void> {
-        if (isCheckQuantitySessions) {
-            await this.sessionsService.checkQuantitySessions(response.id)
-        }
-
-        await this.sessionsService.createSession({
-            userId: response.id,
-            fingerprint,
-            accessToken: response.accessToken,
-            refreshToken,
-        })
-
-        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
     }
 
     private async checkIsUserExist(email: string): Promise<void> {

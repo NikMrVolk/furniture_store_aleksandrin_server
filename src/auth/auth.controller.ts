@@ -58,7 +58,7 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.registration(dto, fingerprint)
 
-        await this.authService.createSessionAndAddRefreshToResponse({
+        await this.createSessionAndAddRefreshToResponse({
             response,
             fingerprint,
             refreshToken,
@@ -89,13 +89,12 @@ export class AuthController {
             dto,
             fingerprint,
         )
-
-        await this.authService.createSessionAndAddRefreshToResponse({
+        await this.sessionsService.checkQuantitySessions(response.id)
+        await this.createSessionAndAddRefreshToResponse({
             response: response,
             fingerprint,
             refreshToken,
             res,
-            isCheckQuantitySessions: true,
         })
 
         return response
@@ -163,4 +162,25 @@ export class AuthController {
     // async getAll(): Promise<IUserWithoutPassword[]> {
     //     return this.userService.getAll()
     // }
+
+    async createSessionAndAddRefreshToResponse({
+        response,
+        fingerprint,
+        refreshToken,
+        res,
+    }: {
+        response: IAuthResponseWithoutRefresh
+        fingerprint: string
+        refreshToken: string
+        res: Response
+    }): Promise<void> {
+        await this.sessionsService.createSession({
+            userId: response.id,
+            fingerprint,
+            accessToken: response.accessToken,
+            refreshToken,
+        })
+
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
+    }
 }

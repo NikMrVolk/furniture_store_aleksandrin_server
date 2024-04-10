@@ -12,9 +12,9 @@ import {
     IAuthResponseWithoutRefresh,
 } from 'src/shared/types/auth.interface'
 import { TokensService } from './tokens.service'
-import { SessionsService } from './sessions.service'
 import { Response } from 'express'
 import { UserService } from 'src/user/user.service'
+import { SessionsService } from 'src/sessions/sessions.service'
 
 @Injectable()
 export class AuthService {

@@ -17,20 +17,18 @@ import { Request, Response } from 'express'
 import { Access, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
-import { SessionsService } from './services/sessions.service'
 import { TokensService } from './services/tokens.service'
 import {
     IAuthResponseWithoutRefresh,
-    IUserWithoutPassword,
     Tokens,
 } from 'src/shared/types/auth.interface'
 import { UserService } from 'src/user/user.service'
+import { SessionsService } from 'src/sessions/sessions.service'
 
 @Controller('auth')
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
-        private readonly userService: UserService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
     ) {}

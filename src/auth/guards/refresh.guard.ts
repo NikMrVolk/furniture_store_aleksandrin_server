@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { AuthGuard } from '@nestjs/passport'
 import * as bcrypt from 'bcrypt'
-import { SessionsService } from '../services/sessions.service'
+import { SessionsService } from 'src/sessions/sessions.service'
 import { FingerprintKeys, IJwtPayload, Tokens } from 'src/shared/types/auth.interface'
 import { UserService } from 'src/user/user.service'
 

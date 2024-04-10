@@ -6,19 +6,13 @@ import { PrismaService } from 'src/prisma.service'
 import { AuthController } from './auth.controller'
 import { AuthService } from './services/auth.service'
 import { TokensService } from './services/tokens.service'
-import { SessionsService } from './services/sessions.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { UserModule } from 'src/user/user.module'
+import { SessionsModule } from 'src/sessions/sessions.module'
 
 @Module({
     controllers: [AuthController],
-    providers: [
-        AuthService,
-        JwtStrategy,
-        PrismaService,
-        TokensService,
-        SessionsService,
-    ],
+    providers: [AuthService, JwtStrategy, PrismaService, TokensService],
     imports: [
         ConfigModule,
         JwtModule.registerAsync({
@@ -27,7 +21,8 @@ import { UserModule } from 'src/user/user.module'
             useFactory: getJwtConfig,
         }),
         UserModule,
+        SessionsModule,
     ],
-    exports: [AuthService, SessionsService, TokensService],
+    exports: [AuthService, TokensService],
 })
 export class AuthModule {}

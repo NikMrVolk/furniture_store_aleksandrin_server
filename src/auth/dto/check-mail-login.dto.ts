@@ -1,6 +1,7 @@
 import { IsEmail } from 'class-validator'
 
-export class LoginUserDto {
+export class CheckMailLoginDto {
     @IsEmail({}, { message: 'Проверьте введённую почту' })
     readonly email: string
+
 }

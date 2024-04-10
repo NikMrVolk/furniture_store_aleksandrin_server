@@ -1,7 +1,6 @@
 import {
     Body,
     Controller,
-    Get,
     HttpCode,
     Post,
     Req,
@@ -11,8 +10,6 @@ import {
     ValidationPipe,
 } from '@nestjs/common'
 import { AuthService } from './services/auth.service'
-import { CreateUserDto } from './dto/create-user.dto'
-import { LoginUserDto } from './dto/login-user.dto'
 import { Request, Response } from 'express'
 import { Access, Refresh } from './decorators/auth.decorator'
 import { Fingerprint } from './decorators/fingerprint.decorator'
@@ -23,7 +20,12 @@ import {
     Tokens,
 } from 'src/shared/types/auth.interface'
 import { SessionsService } from 'src/sessions/sessions.service'
-import { CheckMailDto } from './dto/check-mail.dto'
+import {
+    CheckMailLoginDto,
+    CheckMailRegistrationDto,
+    LoginDto,
+    RegistrationDto,
+} from './dto'
 
 @Controller('auth')
 export class AuthController {
@@ -35,9 +37,12 @@ export class AuthController {
 
     @UsePipes(new ValidationPipe())
     @HttpCode(200)
-    @Post('check-mail')
-    async checkMail(@Body() dto: CheckMailDto) {
-        await this.authService.checkMail(dto.email)
+    @Post('check-mail-registration')
+    async checkMailRegistration(@Body() dto: CheckMailRegistrationDto) {
+        await this.authService.checkMail({
+            email: dto.email,
+            type: 'registration',
+        })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
     }
@@ -47,7 +52,7 @@ export class AuthController {
     @Post('registration')
     async registration(
         @Fingerprint('fingerprint') fingerprint: string,
-        @Body() dto: CreateUserDto,
+        @Body() dto: RegistrationDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
         const { refreshToken, ...response } =
@@ -65,10 +70,19 @@ export class AuthController {
 
     @UsePipes(new ValidationPipe())
     @HttpCode(200)
+    @Post('check-mail-login')
+    async checkMail(@Body() dto: CheckMailLoginDto) {
+        await this.authService.checkMail({ email: dto.email, type: 'login' })
+
+        return `Код подтверждения отправлен на почту ${dto.email}`
+    }
+
+    @UsePipes(new ValidationPipe())
+    @HttpCode(200)
     @Post('login')
     async login(
         @Fingerprint('fingerprint') fingerprint: string,
-        @Body() dto: LoginUserDto,
+        @Body() dto: LoginDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
         const { refreshToken, ...response } = await this.authService.login(

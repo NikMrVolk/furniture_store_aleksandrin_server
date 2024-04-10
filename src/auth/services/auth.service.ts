@@ -3,11 +3,7 @@ import {
     ConflictException,
     Injectable,
     NotFoundException,
-    UnauthorizedException,
 } from '@nestjs/common'
-import { LoginUserDto } from '../dto/login-user.dto'
-import * as bcrypt from 'bcrypt'
-import { CreateUserDto } from '../dto/create-user.dto'
 import {
     IAuthResponse,
     IAuthResponseWithoutRefresh,
@@ -19,7 +15,8 @@ import { SessionsService } from 'src/sessions/sessions.service'
 import { PrismaService } from 'src/prisma.service'
 import { MailService } from 'src/mail/mail.service'
 import { issueActivationCode } from 'src/shared/helpers'
-import { UserActivation } from '@prisma/client'
+import { User, UserActivation } from '@prisma/client'
+import { LoginDto, RegistrationDto } from '../dto'
 
 @Injectable()
 export class AuthService {
@@ -31,8 +28,20 @@ export class AuthService {
         private readonly mailService: MailService,
     ) {}
 
-    async checkMail(email: string): Promise<void> {
-        await this.checkOldUser(email)
+    async checkMail({
+        email,
+        type,
+    }: {
+        email: string
+        type: 'login' | 'registration'
+    }): Promise<void> {
+        if (type === 'registration') {
+            await this.checkIsUserExist(email)
+        }
+
+        if (type === 'login') {
+            await this.searchUserToLogin(email)
+        }
 
         const activationCode = await this.generateAndSaveActivationCode(email)
 
@@ -43,10 +52,10 @@ export class AuthService {
     }
 
     async registration(
-        dto: CreateUserDto,
+        dto: RegistrationDto,
         fingerprint: string,
     ): Promise<IAuthResponse> {
-        await this.checkOldUser(dto.email)
+        await this.checkIsUserExist(dto.email)
         await this.checkActivationCode({
             email: dto.email,
             activationCode: dto.activationCode,
@@ -63,11 +72,14 @@ export class AuthService {
         return { ...user, ...tokens }
     }
 
-    async login(
-        dto: LoginUserDto,
-        fingerprint: string,
-    ): Promise<IAuthResponse> {
-        const { password, ...user } = await this.validateUser(dto)
+    async login(dto: LoginDto, fingerprint: string): Promise<IAuthResponse> {
+        const user = await this.searchUserToLogin(dto.email)
+
+        await this.checkActivationCode({
+            email: dto.email,
+            activationCode: dto.activationCode,
+        })
+
         const tokens = await this.tokensService.issueTokens({
             id: user.id,
             fingerprint,
@@ -75,22 +87,6 @@ export class AuthService {
         })
 
         return { ...user, ...tokens }
-    }
-
-    private async validateUser(dto: LoginUserDto) {
-        const user = await this.userService.getByEmail(dto.email)
-
-        if (!user)
-            throw new NotFoundException(
-                `Пользователь с почтой ${dto.email} не зарегистрирован`,
-            )
-
-        const comparePassword = bcrypt.compareSync(dto.password, user.password)
-
-        if (!comparePassword)
-            throw new UnauthorizedException('Не верный пароль')
-
-        return user
     }
 
     async createSessionAndAddRefreshToResponse({
@@ -120,7 +116,7 @@ export class AuthService {
         this.tokensService.addRefreshTokenToResponse(res, refreshToken)
     }
 
-    private async checkOldUser(email: string): Promise<void> {
+    private async checkIsUserExist(email: string): Promise<void> {
         const oldUser = await this.userService.getByEmail(email)
 
         if (oldUser)
@@ -129,7 +125,18 @@ export class AuthService {
             )
     }
 
-    private async getOldActivationDate(email: string): Promise<UserActivation> {
+    private async searchUserToLogin(email: string): Promise<User> {
+        const user = await this.userService.getByEmail(email)
+
+        if (!user)
+            throw new NotFoundException(
+                `Пользователь с почтой ${email} не зарегистрирован`,
+            )
+
+        return user
+    }
+
+    private async getOldActivationData(email: string): Promise<UserActivation> {
         return await this.prisma.userActivation.findUnique({
             where: { email },
         })
@@ -140,7 +147,7 @@ export class AuthService {
     ): Promise<string> {
         const activationCode = issueActivationCode()
 
-        const oldActivationData = await this.getOldActivationDate(email)
+        const oldActivationData = await this.getOldActivationData(email)
 
         if (oldActivationData) {
             await this.prisma.userActivation.update({
@@ -195,7 +202,7 @@ export class AuthService {
         email: string
         activationCode: string
     }): Promise<void> {
-        const oldActivationData = await this.getOldActivationDate(email)
+        const oldActivationData = await this.getOldActivationData(email)
 
         if (oldActivationData.activationCode !== activationCode) {
             if (oldActivationData.activationAttempts >= 3) {

@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator'
 
-export class CheckMailDto {
+export class CheckMailRegistrationDto {
     @IsEmail({}, { message: 'Проверьте введённую почту' })
     readonly email: string
 

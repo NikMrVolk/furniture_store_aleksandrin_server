@@ -5,19 +5,19 @@ import { MailerService } from '@nestjs-modules/mailer'
 export class MailService {
     constructor(private readonly mailerService: MailerService) {}
 
-    async sendMail({
-        to,
-        activationLink,
+    async sendActivationCode({
+        email,
+        activationCode,
     }: {
-        to: string
-        activationLink: string
+        email: string
+        activationCode: string
     }) {
         await this.mailerService.sendMail({
             from: process.env.SMTP_USER,
-            to,
+            to: email,
             template: 'activate',
             subject: 'Активация аккаунта',
-            context: { activationLink },
+            context: { activationCode },
         })
     }
 }

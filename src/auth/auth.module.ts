@@ -9,6 +9,7 @@ import { TokensService } from './services/tokens.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { UserModule } from 'src/user/user.module'
 import { SessionsModule } from 'src/sessions/sessions.module'
+import { MailModule } from 'src/mail/mail.module'
 
 @Module({
     controllers: [AuthController],
@@ -22,6 +23,7 @@ import { SessionsModule } from 'src/sessions/sessions.module'
         }),
         UserModule,
         SessionsModule,
+        MailModule
     ],
     exports: [AuthService, TokensService],
 })

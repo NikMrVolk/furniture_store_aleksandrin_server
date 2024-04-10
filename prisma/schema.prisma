@@ -31,8 +31,9 @@ model UserActivation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  email          String @unique
-  activationCode String @map("activation_code")
+  email             String @unique
+  activationCode    String @map("activation_code")
+  activationAttempt Int    @default(0) @map("activation_attempt")
 
   @@map("user_activations")
 }

@@ -15,6 +15,8 @@ import { TokensService } from './tokens.service'
 import { Response } from 'express'
 import { UserService } from 'src/user/user.service'
 import { SessionsService } from 'src/sessions/sessions.service'
+import { PrismaService } from 'src/prisma.service'
+import { MailService } from 'src/mail/mail.service'
 
 @Injectable()
 export class AuthService {
@@ -22,18 +24,26 @@ export class AuthService {
         private readonly userService: UserService,
         private readonly tokensService: TokensService,
         private readonly sessionsService: SessionsService,
+        private readonly prisma: PrismaService,
+        private readonly mailService: MailService,
     ) {}
+
+    async checkMail(email: string): Promise<void> {
+        await this.checkOldUser(email)
+
+        const activationCode = await this.generateAndSaveActivationCode(email)
+
+        this.mailService.sendActivationCode({
+            email,
+            activationCode,
+        })
+    }
 
     async registration(
         dto: CreateUserDto,
         fingerprint: string,
     ): Promise<IAuthResponse> {
-        const oldUser = await this.userService.getByEmail(dto.email)
-
-        if (oldUser)
-            throw new ConflictException(
-                `Пользователь с почтой ${dto.email} уже существует`,
-            )
+        await this.checkOldUser(dto.email)
 
         const { password, ...user } = await this.userService.create(dto)
 
@@ -101,5 +111,44 @@ export class AuthService {
         })
 
         this.tokensService.addRefreshTokenToResponse(res, refreshToken)
+    }
+
+    private async checkOldUser(email: string): Promise<void> {
+        const oldUser = await this.userService.getByEmail(email)
+
+        if (oldUser)
+            throw new ConflictException(
+                `Пользователь с почтой ${email} уже существует`,
+            )
+    }
+
+    private async generateAndSaveActivationCode(
+        email: string,
+    ): Promise<string> {
+        const activationCode = Math.floor(Math.random() * 10000)
+            .toString()
+            .padStart(4, '0')
+
+        const oldActivationData = await this.prisma.userActivation.findUnique({
+            where: { email },
+        })
+
+        if (oldActivationData) {
+            await this.prisma.userActivation.update({
+                where: { id: oldActivationData.id },
+                data: {
+                    activationCode,
+                },
+            })
+        } else {
+            await this.prisma.userActivation.create({
+                data: {
+                    email,
+                    activationCode,
+                },
+            })
+        }
+
+        return activationCode
     }
 }

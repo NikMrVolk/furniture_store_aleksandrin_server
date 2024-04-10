@@ -22,7 +22,6 @@ import {
     IAuthResponseWithoutRefresh,
     Tokens,
 } from 'src/shared/types/auth.interface'
-import { UserService } from 'src/user/user.service'
 import { SessionsService } from 'src/sessions/sessions.service'
 
 @Controller('auth')
@@ -32,6 +31,15 @@ export class AuthController {
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
     ) {}
+
+    @UsePipes(new ValidationPipe())
+    @HttpCode(200)
+    @Post('check-mail')
+    async checkMail(@Body() dto: CreateUserDto) {
+        await this.authService.checkMail(dto.email)
+
+        return `Код подтверждения отправлен на почту ${dto.email}`
+    }
 
     @UsePipes(new ValidationPipe())
     @HttpCode(200)

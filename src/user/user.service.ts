@@ -9,21 +9,21 @@ import { CreateUserDto } from 'src/auth/dto/create-user.dto'
 export class UserService {
     constructor(private prisma: PrismaService) {}
 
-    async getAll(): Promise<IUserWithoutPassword[]> {
-        return this.prisma.user.findMany({
-            select: {
-                id: true,
-                name: true,
-                surname: true,
-                email: true,
-                createdAt: true,
-                updatedAt: true,
-                roles: true,
-                provider: true,
-                phone: true,
-            },
-        })
-    }
+    // async getAll(): Promise<IUserWithoutPassword[]> {
+    //     return this.prisma.user.findMany({
+    //         select: {
+    //             id: true,
+    //             name: true,
+    //             surname: true,
+    //             email: true,
+    //             createdAt: true,
+    //             updatedAt: true,
+    //             roles: true,
+    //             provider: true,
+    //             phone: true,
+    //         },
+    //     })
+    // }
 
     async getById(id: number): Promise<User> {
         return this.prisma.user.findUnique({ where: { id } })
@@ -51,7 +51,9 @@ export class UserService {
         if (data.email === process.env.ADMIN_MAIL) {
             return this.prisma.user.create({
                 data: {
-                    ...data,
+                    email: data.email,
+                    password: data.password,
+                    profile: { create: { name: data.name } },
                     roles: { set: ['USER', 'ADMIN'] },
                     cart: { create: {} },
                     favorite: { create: {} },
@@ -60,7 +62,13 @@ export class UserService {
         }
 
         return this.prisma.user.create({
-            data: { ...data, cart: { create: {} }, favorite: { create: {} } },
+            data: {
+                email: data.email,
+                password: data.password,
+                profile: { create: { name: data.name } },
+                cart: { create: {} },
+                favorite: { create: {} },
+            },
         })
     }
 
@@ -74,7 +82,14 @@ export class UserService {
         if (oAuthData.email === process.env.ADMIN_MAIL) {
             return this.prisma.user.create({
                 data: {
-                    ...oAuthData,
+                    email: oAuthData.email,
+                    profile: {
+                        create: {
+                            name: oAuthData.name,
+                            surname: oAuthData.surname,
+                            phone: oAuthData.phone,
+                        },
+                    },
                     roles: { set: ['USER', 'ADMIN'] },
                     cart: { create: {} },
                     favorite: { create: {} },
@@ -85,6 +100,7 @@ export class UserService {
         return this.prisma.user.create({
             data: {
                 ...oAuthData,
+                profile: { create: { ...oAuthData } },
                 cart: { create: {} },
                 favorite: { create: {} },
             },

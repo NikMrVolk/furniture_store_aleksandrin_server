@@ -136,10 +136,10 @@ export class AuthController {
         this.tokensService.removeRefreshTokenFromResponse(res)
     }
 
-    @HttpCode(200)
-    @Access()
-    @Get()
-    async getAll(): Promise<IUserWithoutPassword[]> {
-        return this.userService.getAll()
-    }
+    // @HttpCode(200)
+    // @Access()
+    // @Get()
+    // async getAll(): Promise<IUserWithoutPassword[]> {
+    //     return this.userService.getAll()
+    // }
 }

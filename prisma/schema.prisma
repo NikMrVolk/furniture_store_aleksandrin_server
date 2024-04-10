@@ -13,6 +13,7 @@ enum Role {
 }
 
 enum Provider {
+  SIMPLE_MAIL
   GOOGLE
   YANDEX
   MAILRU
@@ -25,28 +26,52 @@ enum OrderStatus {
   COMPLETED
 }
 
+model UserActivation {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  email          String @unique
+  activationCode String @map("activation_code")
+
+  @@map("user_activations")
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  email    String    @unique
+  email    String  @unique
   password String?
-  provider Provider?
 
+  profile Profile?
+  address Address? @relation("UserAddress", map: "user_address")
+
+  provider Provider?
   roles    Role[]    @default([USER])
   sessions Session[]
+
+  cart     Cart?
+  favorite Favorite?
+  orders   Order[]
+
+  @@map("users")
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   name    String?
   surname String?
   phone   String?
 
-  cart     Cart?
-  favorite Favorite?
-  address  Address?  @relation("UserAddress", map: "user_address")
-  orders   Order[]
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("users")
+  @@map("profiles")
 }
 
 model Session {
@@ -63,6 +88,47 @@ model Session {
   expiresIn    DateTime @map("expires_in")
 
   @@map("sessions")
+}
+
+model UnregisteredSession {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  key String @unique
+
+  unregisteredCart UnregisteredCart? @relation(map: "safsadfsad")
+
+  @@map("unregistered_sessions")
+}
+
+model UnregisteredCart {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  unregisteredCartItem UnregisteredCartItem[]
+
+  unregisteredSessionId Int                 @unique @map("unregistered_session_id")
+  unregisteredSession   UnregisteredSession @relation(map: "unregistered_session", fields: [unregisteredSessionId], references: [id], onDelete: Cascade)
+
+  @@map("unregistered_carts")
+}
+
+model UnregisteredCartItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  quantity Int
+
+  unregisteredCartId Int              @map("unregistered_cart_id")
+  unregisteredCart   UnregisteredCart @relation(fields: [unregisteredCartId], references: [id], onDelete: Cascade)
+
+  itemId Int  @map("item_id")
+  item   Item @relation(fields: [itemId], references: [id])
+
+  @@map("unregistered_cart_items")
 }
 
 model Cart {
@@ -129,9 +195,10 @@ model Item {
   info            ItemInfo?
   characteristics ItemCharacteristic[]
 
-  cartItem      CartItem[]
-  favoriteItems FavoriteItem[]
-  orderItems    OrderItem[]
+  cartItem             CartItem[]
+  unregisteredCartItem UnregisteredCartItem[]
+  favoriteItems        FavoriteItem[]
+  orderItems           OrderItem[]
 
   brandId Int    @map("brand_id")
   brand   Brand? @relation(fields: [brandId], references: [id])
@@ -188,7 +255,7 @@ model Type {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  parentTypeId Int @map("parent_type_id")
+  parentTypeId Int? @map("parent_type_id")
 
   title String
   image String?
@@ -248,4 +315,6 @@ model Address {
 
   userId Int?  @unique @map("user_id")
   user   User? @relation("UserAddress", fields: [userId], references: [id])
+
+  @@map("addresses")
 }

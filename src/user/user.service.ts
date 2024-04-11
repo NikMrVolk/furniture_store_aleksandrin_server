@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { ConflictException, Injectable } from '@nestjs/common'
 import { Provider, Session, User } from '@prisma/client'
 import { RegistrationDto } from 'src/auth/dto'
 import { PrismaService } from 'src/prisma.service'
@@ -34,10 +34,21 @@ export class UserService {
         })
     }
 
-    async getByEmail(email: string): Promise<User> {
-        return this.prisma.user.findUnique({
+    public async getByEmail(email: string): Promise<User> {
+        return await this.prisma.user.findUnique({
             where: { email },
         })
+    }
+
+    public async checkingUserExistsByEmail(email: string): Promise<void> {
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+        })
+
+        if (user)
+            throw new ConflictException(
+                `Пользователь с почтой ${email} уже существует`,
+            )
     }
 
     async create(dto: RegistrationDto): Promise<User> {

@@ -10,11 +10,13 @@ import { JwtStrategy } from './strategies/jwt.strategy'
 import { UserModule } from 'src/user/user.module'
 import { SessionsModule } from 'src/sessions/sessions.module'
 import { MailModule } from 'src/mail/mail.module'
+import { ActivationService } from './services/activation.service'
 
 @Module({
     controllers: [AuthController],
     providers: [
         AuthService,
+        ActivationService,
         JwtStrategy,
         PrismaService,
         TokensService,

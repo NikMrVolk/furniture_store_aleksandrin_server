@@ -25,15 +25,31 @@ enum OrderStatus {
   ON_THE_WAY
   COMPLETED
 }
+// block user witch spam mails bigger than 5 in week
+model TotalActivationAttempts {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  unauthorizedUserKey   String @unique @map("unauthorized-user-key")
+  totalSendMailAttempts Int    @default(1) @map("total_number_attempts")
+
+  userActivation UserActivation? @relation(map: "user_activations")
+
+  @@map("total_activation_attempts")
+}
 
 model UserActivation {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  email             String @unique
-  activationCode    String @map("activation_code")
-  activationAttempts Int    @default(0) @map("activation_attempt")
+  email              String @unique
+  activationCode     String @map("activation_code")
+  activationAttempts Int    @default(1) @map("activation_attempt")
+
+  totalActivationAttemptId Int                     @unique @map("total_activation_attempt_id")
+  totalActivationAttempt   TotalActivationAttempts @relation(map: "total_activation_attempts", fields: [totalActivationAttemptId], references: [id], onDelete: Cascade)
 
   @@map("user_activations")
 }
@@ -43,8 +59,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  email    String  @unique
-  password String?
+  email String @unique
 
   profile Profile?
   address Address? @relation("UserAddress", map: "user_address")
@@ -96,7 +111,7 @@ model UnregisteredSession {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  key String @unique
+  unauthorizedUserKey String @unique
 
   unregisteredCart UnregisteredCart? @relation(map: "safsadfsad")
 

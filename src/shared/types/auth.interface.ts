@@ -1,15 +1,19 @@
-import { $Enums, Provider, User } from '@prisma/client'
+import {
+    $Enums,
+    Provider,
+    TotalActivationAttempts,
+    User,
+    UserActivation,
+} from '@prisma/client'
 
 export type MyOmit<T, K extends keyof T> = Omit<T, K>
-
-export type IUserWithoutPassword = MyOmit<User, 'password'>
 
 export interface IJwt {
     accessToken: string
     refreshToken: string
 }
 
-export type IAuthResponse = IUserWithoutPassword & IJwt
+export type IAuthResponse = User & IJwt
 
 export type IAuthResponseWithoutRefresh = MyOmit<IAuthResponse, 'refreshToken'>
 
@@ -22,6 +26,10 @@ export enum FingerprintKeys {
 export enum Tokens {
     REFRESH_TOKEN_NAME = 'refreshToken',
     ACCESS_TOKEN_NAME = 'accessToken',
+}
+
+export enum CookieNames {
+    UNAUTHORIZED_USER_KEY = 'unauthorizedUserKey',
 }
 
 export interface IJwtPayload {
@@ -42,4 +50,8 @@ export interface IOAuth {
     user: IQueryUser
     provider: Provider
     url: string
+}
+
+export interface ITotalActivation extends TotalActivationAttempts {
+    userActivation: UserActivation
 }

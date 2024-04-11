@@ -44,7 +44,7 @@ export class TokensService {
             if (!result)
                 throw new UnauthorizedException('Invalid refresh token')
 
-            const { password, ...user } = await this.userService.getById(
+            const user = await this.userService.getById(
                 result.id,
             )
             const tokens = await this.issueTokens({

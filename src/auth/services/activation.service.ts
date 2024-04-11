@@ -5,10 +5,8 @@ import {
 } from '@nestjs/common'
 import { MailService } from 'src/mail/mail.service'
 import { PrismaService } from 'src/prisma.service'
-import { AuthService } from './auth.service'
-import { ITotalActivation } from 'src/shared/types/auth.interface'
-import { TotalActivationAttempts } from '@prisma/client'
-import { issueActivationCode } from 'src/shared/helpers'
+import { UserActivation } from '@prisma/client'
+import { issueActivationCode, pushIfNewElUnique } from 'src/shared/helpers'
 import { UserService } from 'src/user/user.service'
 
 @Injectable()
@@ -28,10 +26,12 @@ export class ActivationService {
         email,
         type,
         userKey,
+        fingerprint,
     }: {
         email: string
         type: 'login' | 'registration'
         userKey: string
+        fingerprint: string
     }): Promise<void> {
         if (type === 'registration') {
             await this.userService.checkingUserExistsByEmail(email)
@@ -50,22 +50,12 @@ export class ActivationService {
         const activationCode = await this.generateAndSaveActivationCode({
             email,
             userKey,
+            fingerprint,
         })
 
         this.mailService.sendActivationCode({
             email,
             activationCode,
-        })
-    }
-
-    private async getOldTotalActivationData(
-        userKey: string,
-    ): Promise<ITotalActivation | null> {
-        return await this.prisma.totalActivationAttempts.findUnique({
-            where: { unauthorizedUserKey: userKey },
-            include: {
-                userActivation: true,
-            },
         })
     }
 
@@ -78,33 +68,32 @@ export class ActivationService {
         activationCode: string
         userKey: string
     }): Promise<void> {
-        const oldTotalActivationData =
-            await this.getOldTotalActivationData(userKey)
+        const userActivation = await this.getUserActivationByKey(userKey)
 
-        if (
-            !oldTotalActivationData?.userActivation ||
-            oldTotalActivationData.userActivation.email !== email
-        ) {
+        if (!userActivation || !userActivation.emails.includes(email)) {
             throw new NotFoundException(
                 'Предоставленная вами информация не действительна.',
             )
         }
 
-        await this.handlingLargeAttempts({
-            oldTotalActivationData,
+        await this.codeExpiredCheck({ userActivation, email })
+
+        await this.handleLargeAttempts({
+            userActivation,
             email,
         })
 
-        await this.codeExpiredCheck({ oldTotalActivationData, email })
+        if (userActivation.activationCode !== activationCode) {
+            await this.handleLastCodeAttempts({
+                email,
+                userActivation,
+                newActivationCode: issueActivationCode(),
+            })
 
-        if (
-            oldTotalActivationData.userActivation.activationCode !==
-            activationCode
-        ) {
             await this.prisma.userActivation.update({
-                where: { id: oldTotalActivationData.userActivation.id },
+                where: { id: userActivation.id },
                 data: {
-                    activationAttempts: {
+                    codeAttempts: {
                         increment: 1,
                     },
                 },
@@ -115,58 +104,59 @@ export class ActivationService {
             )
         }
 
-        await this.prisma.userActivation.delete({
-            where: { id: oldTotalActivationData.userActivation.id },
+        await this.prisma.userActivation.update({
+            where: { id: userActivation.id },
+            data: {
+                activationCode: null,
+                codeAttempts: 0,
+            },
+        })
+    }
+
+    private async getUserActivationByKey(
+        userKey: string,
+    ): Promise<UserActivation | null> {
+        return await this.prisma.userActivation.findUnique({
+            where: { unauthUserKey: userKey },
         })
     }
 
     private async generateAndSaveActivationCode({
         email,
         userKey,
+        fingerprint,
     }: {
         userKey: string
         email: string
+        fingerprint: string
     }): Promise<string> {
         const activationCode = issueActivationCode()
-        const oldTotalActivationAttempts =
-            await this.getOldTotalActivationData(userKey)
+        const userActivation = await this.getUserActivationByKey(userKey)
 
-        if (oldTotalActivationAttempts) {
-            await this.checkMaxMailSend(oldTotalActivationAttempts)
+        if (userActivation) {
+            await this.checkMaxMailSend(userActivation)
 
-            await this.prisma.totalActivationAttempts.update({
-                where: { id: oldTotalActivationAttempts.id },
+            await this.prisma.userActivation.update({
+                where: { id: userActivation.id },
                 data: {
-                    unauthorizedUserKey: userKey,
-                    totalSendMailAttempts: {
+                    unauthUserKey: userKey,
+                    mailAttempts: {
                         increment: 1,
                     },
-                    userActivation: oldTotalActivationAttempts.userActivation
-                        ? {
-                              update: {
-                                  email,
-                                  activationCode,
-                                  activationAttempts: 1,
-                              },
-                          }
-                        : {
-                              create: {
-                                  email,
-                                  activationCode,
-                              },
-                          },
+                    codeAttempts: 1,
+                    activationCode,
+                    emails: pushIfNewElUnique(userActivation.emails, email),
                 },
             })
         } else {
-            await this.prisma.totalActivationAttempts.create({
+            await this.prisma.userActivation.create({
                 data: {
-                    unauthorizedUserKey: userKey,
-                    userActivation: {
-                        create: {
-                            email,
-                            activationCode,
-                        },
+                    unauthUserKey: userKey,
+                    emails: {
+                        set: [email],
                     },
+                    activationCode,
+                    fingerprint,
                 },
             })
         }
@@ -175,65 +165,59 @@ export class ActivationService {
     }
 
     private async checkMaxMailSend(
-        totalActivationAttempts: TotalActivationAttempts,
+        userActivation: UserActivation,
     ): Promise<void> {
-        if (
-            totalActivationAttempts.totalSendMailAttempts >=
-            this.MAX_MAIL_ATTEMPTS
-        ) {
+        if (userActivation.mailAttempts > this.MAX_MAIL_ATTEMPTS) {
             throw new BadRequestException(
                 'Вы превысили лимит отправки сообщений. Повторите попытку позже или обратитесь к администратору.',
             )
         }
     }
 
-    private async handlingLargeAttempts({
-        oldTotalActivationData,
+    private async handleLargeAttempts({
+        userActivation,
         email,
     }: {
-        oldTotalActivationData: ITotalActivation
+        userActivation: UserActivation
         email: string
     }): Promise<void> {
-        if (
-            oldTotalActivationData.userActivation.activationAttempts >=
-            this.MAX_CODE_ATTEMPTS
-        ) {
+        if (userActivation.codeAttempts > this.MAX_CODE_ATTEMPTS) {
             const newActivationCode = issueActivationCode()
 
-            await this.checkMaxMailSend(oldTotalActivationData)
+            await this.checkMaxMailSend(userActivation)
 
-            await this.updateTotalActivationAndSendMail({
-                oldTotalActivationData,
+            await this.updateUserActivationAndSendMail({
+                userActivation,
                 newActivationCode,
                 email,
             })
 
             throw new BadRequestException(
-                `На почту ${email} выслан новый код активации.`,
+                `Не верный код активации. На почту ${email} выслан новый.`,
             )
         }
     }
 
     private async codeExpiredCheck({
-        oldTotalActivationData,
+        userActivation,
         email,
     }: {
-        oldTotalActivationData: ITotalActivation
+        userActivation: UserActivation
         email: string
     }) {
-        const activationDate = new Date(
-            oldTotalActivationData.userActivation.updatedAt,
-        )
+        const activationDate = new Date(userActivation.updatedAt)
+        //todo change to one hour
         const oneHourAgo = new Date()
         oneHourAgo.setMinutes(oneHourAgo.getMinutes() - 1)
 
         if (oneHourAgo > activationDate) {
+            await this.handleLargeAttempts({ userActivation, email })
+            await this.checkMaxMailSend(userActivation)
+
             const newActivationCode = issueActivationCode()
 
-            await this.handlingLargeAttempts({ oldTotalActivationData, email })
-
-            await this.updateTotalActivationAndSendMail({
-                oldTotalActivationData,
+            await this.updateUserActivationAndSendMail({
+                userActivation,
                 newActivationCode,
                 email,
             })
@@ -244,31 +228,43 @@ export class ActivationService {
         }
     }
 
-    private async updateTotalActivationAndSendMail({
+    private async handleLastCodeAttempts({
         email,
-        oldTotalActivationData,
+        userActivation,
         newActivationCode,
     }: {
         email: string
-        oldTotalActivationData: ITotalActivation
+        userActivation: UserActivation
         newActivationCode: string
-    }) {
-        await this.prisma.totalActivationAttempts.update({
-            where: { id: oldTotalActivationData.id },
-            data: {
-                totalSendMailAttempts: { increment: 1 },
+    }): Promise<void> {
+        if (userActivation.codeAttempts === this.MAX_CODE_ATTEMPTS) {
+            await this.updateUserActivationAndSendMail({
+                email,
+                userActivation,
+                newActivationCode,
+            })
 
-                userActivation: {
-                    update: {
-                        where: {
-                            id: oldTotalActivationData.userActivation.id,
-                        },
-                        data: {
-                            activationCode: newActivationCode,
-                            activationAttempts: 1,
-                        },
-                    },
-                },
+            throw new BadRequestException(
+                `Не верный код активации. Новый код отправлен на почту ${email}.`,
+            )
+        }
+    }
+
+    private async updateUserActivationAndSendMail({
+        email,
+        userActivation,
+        newActivationCode,
+    }: {
+        email: string
+        userActivation: UserActivation
+        newActivationCode: string
+    }): Promise<void> {
+        await this.prisma.userActivation.update({
+            where: { id: userActivation.id },
+            data: {
+                mailAttempts: { increment: 1 },
+                activationCode: newActivationCode,
+                codeAttempts: 1,
             },
         })
 

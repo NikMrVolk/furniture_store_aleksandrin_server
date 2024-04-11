@@ -1,10 +1,4 @@
-import {
-    $Enums,
-    Provider,
-    TotalActivationAttempts,
-    User,
-    UserActivation,
-} from '@prisma/client'
+import { $Enums, Provider, User } from '@prisma/client'
 
 export type MyOmit<T, K extends keyof T> = Omit<T, K>
 
@@ -50,8 +44,4 @@ export interface IOAuth {
     user: IQueryUser
     provider: Provider
     url: string
-}
-
-export interface ITotalActivation extends TotalActivationAttempts {
-    userActivation: UserActivation
 }

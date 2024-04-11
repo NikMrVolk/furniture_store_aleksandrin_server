@@ -25,31 +25,18 @@ enum OrderStatus {
   ON_THE_WAY
   COMPLETED
 }
-// block user witch spam mails bigger than 5 in week
-model TotalActivationAttempts {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  unauthorizedUserKey   String @unique @map("unauthorized-user-key")
-  totalSendMailAttempts Int    @default(1) @map("total_number_attempts")
-
-  userActivation UserActivation? @relation(map: "user_activations")
-
-  @@map("total_activation_attempts")
-}
 
 model UserActivation {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  email              String @unique
-  activationCode     String @map("activation_code")
-  activationAttempts Int    @default(1) @map("activation_attempt")
-
-  totalActivationAttemptId Int                     @unique @map("total_activation_attempt_id")
-  totalActivationAttempt   TotalActivationAttempts @relation(map: "total_activation_attempts", fields: [totalActivationAttemptId], references: [id], onDelete: Cascade)
+  emails         String[]
+  fingerprint    String
+  unauthUserKey  String   @unique @map("unauth_user_key")
+  activationCode String?  @map("activation_code")
+  codeAttempts   Int      @default(1) @map("code_attempts")
+  mailAttempts   Int      @default(1) @map("mail_attempts")
 
   @@map("user_activations")
 }

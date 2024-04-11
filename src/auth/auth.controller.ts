@@ -45,11 +45,13 @@ export class AuthController {
     async checkMailRegistration(
         @Body() dto: CheckMailRegistrationDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
+        @Fingerprint('fingerprint') fingerprint: string,
     ) {
         await this.activationService.checkMail({
             email: dto.email,
             type: 'registration',
             userKey,
+            fingerprint,
         })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -65,7 +67,7 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
         const { refreshToken, ...response } =
-            await this.authService.registration({dto, fingerprint, userKey})
+            await this.authService.registration({ dto, fingerprint, userKey })
 
         await this.createSessionAndAddRefreshToResponse({
             response,
@@ -83,11 +85,13 @@ export class AuthController {
     async checkMail(
         @Body() dto: CheckMailLoginDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
+        @Fingerprint('fingerprint') fingerprint: string,
     ) {
         await this.activationService.checkMail({
             email: dto.email,
             type: 'login',
             userKey,
+            fingerprint,
         })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -105,7 +109,7 @@ export class AuthController {
         const { refreshToken, ...response } = await this.authService.login(
             dto,
             fingerprint,
-            userKey
+            userKey,
         )
         await this.sessionsService.checkQuantitySessions(response.id)
         await this.createSessionAndAddRefreshToResponse({

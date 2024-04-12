@@ -31,25 +31,18 @@ export class ActivationHandlerService {
         fingerprint: string
     }): Promise<void> {
         if (userActivation.mailAttempts < this.SUSPICIOUSNESS_CHECK_LIMIT) {
-            const checkAttempts = {
+            const whereOptions = {
                 mailAttempts: {
                     gte: this.MAX_MAIL_ATTEMPTS,
                 },
-            }
-            const checkAttemptsAndMail = {
-                ...checkAttempts,
-                emails: {
-                    has: email,
-                },
+                ...(userActivation.mailAttempts === this.ATTEMPTS_START_VALUE
+                    ? { emails: { has: email } }
+                    : {}),
             }
 
             const allSuspicionUsers = await this.prisma.userActivation.findMany(
                 {
-                    where:
-                        userActivation.mailAttempts ===
-                        this.ATTEMPTS_START_VALUE
-                            ? checkAttemptsAndMail
-                            : checkAttempts,
+                    where: whereOptions,
                     select: {
                         fingerprint: true,
                     },

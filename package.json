@@ -31,6 +31,7 @@
         "@nestjs/jwt": "^10.2.0",
         "@nestjs/passport": "^10.0.3",
         "@nestjs/platform-express": "^10.0.0",
+        "@nestjs/swagger": "^7.3.1",
         "@prisma/client": "^5.11.0",
         "axios": "^1.6.8",
         "bcrypt": "^5.1.1",
@@ -44,7 +45,8 @@
         "passport-oauth-mail-ru": "^1.0.0",
         "passport-yandex": "^0.0.5",
         "reflect-metadata": "^0.1.13",
-        "rxjs": "^7.8.1"
+        "rxjs": "^7.8.1",
+        "swagger-ui-express": "^5.0.0"
     },
     "devDependencies": {
         "@nestjs/cli": "^10.0.0",

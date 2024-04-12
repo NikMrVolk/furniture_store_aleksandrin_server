@@ -168,7 +168,7 @@ export class ActivationService {
     private async handleLargeMailAttempts(
         userActivation: UserActivation,
     ): Promise<void> {
-        if (userActivation.mailAttempts > this.MAX_MAIL_ATTEMPTS) {
+        if (userActivation.mailAttempts >= this.MAX_MAIL_ATTEMPTS) {
             throw new BadRequestException(
                 'Вы превысили лимит отправки сообщений. Повторите попытку позже или обратитесь к администратору.',
             )
@@ -182,7 +182,7 @@ export class ActivationService {
         userActivation: UserActivation
         email: string
     }): Promise<void> {
-        if (userActivation.codeAttempts > this.MAX_CODE_ATTEMPTS) {
+        if (userActivation.codeAttempts >= this.MAX_CODE_ATTEMPTS) {
             const newActivationCode = issueActivationCode()
 
             await this.handleLargeMailAttempts(userActivation)
@@ -269,7 +269,7 @@ export class ActivationService {
         userActivation: UserActivation
         newActivationCode: string
     }): Promise<void> {
-        if (userActivation.codeAttempts === this.MAX_CODE_ATTEMPTS) {
+        if (userActivation.codeAttempts >= this.MAX_CODE_ATTEMPTS) {
             await this.updateUserActivationAndSendMail({
                 email,
                 userActivation,
@@ -294,7 +294,7 @@ export class ActivationService {
         if (userActivation.mailAttempts < 3) {
             const checkAttempts = {
                 mailAttempts: {
-                    gt: this.MAX_MAIL_ATTEMPTS,
+                    gte: this.MAX_MAIL_ATTEMPTS,
                 },
             }
             const checkAttemptsAndMail = {
@@ -328,7 +328,7 @@ export class ActivationService {
                     await this.prisma.userActivation.update({
                         where: { id: userActivation.id },
                         data: {
-                            mailAttempts: this.MAX_MAIL_ATTEMPTS + 2,
+                            mailAttempts: this.MAX_MAIL_ATTEMPTS + 1,
                         },
                     })
 

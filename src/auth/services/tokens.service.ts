@@ -7,6 +7,7 @@ import {
     Tokens,
 } from 'src/shared/types/auth.interface'
 import { UserService } from 'src/user/user.service'
+import { IFingerprint } from '../decorators/fingerprint.decorator'
 
 @Injectable()
 export class TokensService {
@@ -37,19 +38,17 @@ export class TokensService {
 
     async getNewTokens(
         refreshToken: string,
-        fingerprint: string,
+        fingerprint: IFingerprint,
     ): Promise<IAuthResponse> {
         try {
             const result = await this.jwt.verifyAsync(refreshToken)
             if (!result)
                 throw new UnauthorizedException('Invalid refresh token')
 
-            const user = await this.userService.getById(
-                result.id,
-            )
+            const user = await this.userService.getById(result.id)
             const tokens = await this.issueTokens({
                 id: user.id,
-                fingerprint,
+                fingerprint: fingerprint.hashFingerprint,
                 roles: user.roles,
             })
 

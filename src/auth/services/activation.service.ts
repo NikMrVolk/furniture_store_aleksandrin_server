@@ -5,9 +5,11 @@ import {
 } from '@nestjs/common'
 import { MailService } from 'src/mail/mail.service'
 import { PrismaService } from 'src/prisma.service'
-import { UserActivation } from '@prisma/client'
+import { User, UserActivation } from '@prisma/client'
 import { issueActivationCode, pushIfNewElUnique } from 'src/shared/helpers'
 import { UserService } from 'src/user/user.service'
+import * as bcrypt from 'bcrypt'
+import { IFingerprint } from '../decorators/fingerprint.decorator'
 
 @Injectable()
 export class ActivationService {
@@ -31,26 +33,20 @@ export class ActivationService {
         email: string
         type: 'login' | 'registration'
         userKey: string
-        fingerprint: string
+        fingerprint: IFingerprint
     }): Promise<void> {
         if (type === 'registration') {
             await this.userService.checkingUserExistsByEmail(email)
         }
 
         if (type === 'login') {
-            const user = await this.userService.getByEmail(email)
-
-            if (!user) {
-                throw new NotFoundException(
-                    `Пользователь с почтой ${email} не зарегистрирован`,
-                )
-            }
+            await this.getUserByEmailAndCheck(email)
         }
 
         const activationCode = await this.generateAndSaveActivationCode({
             email,
             userKey,
-            fingerprint,
+            fingerprint: fingerprint,
         })
 
         this.mailService.sendActivationCode({
@@ -76,33 +72,17 @@ export class ActivationService {
             )
         }
 
-        await this.codeExpiredCheck({ userActivation, email })
-
-        await this.handleLargeAttempts({
+        await this.handleExpiringCode({ userActivation, email })
+        await this.handleLargeCodeAttempts({
             userActivation,
             email,
         })
-
-        if (userActivation.activationCode !== activationCode) {
-            await this.handleLastCodeAttempts({
-                email,
-                userActivation,
-                newActivationCode: issueActivationCode(),
-            })
-
-            await this.prisma.userActivation.update({
-                where: { id: userActivation.id },
-                data: {
-                    codeAttempts: {
-                        increment: 1,
-                    },
-                },
-            })
-
-            throw new BadRequestException(
-                `Не верный код активации. Повторите попытку.`,
-            )
-        }
+        await this.handleLargeMailAttempts(userActivation)
+        await this.handleInvalidCode({
+            email,
+            userActivation,
+            activationCode,
+        })
 
         await this.prisma.userActivation.update({
             where: { id: userActivation.id },
@@ -121,6 +101,18 @@ export class ActivationService {
         })
     }
 
+    private async getUserByEmailAndCheck(email: string): Promise<User> {
+        const user = await this.userService.getByEmail(email)
+
+        if (!user) {
+            throw new NotFoundException(
+                `Пользователь с почтой ${email} не зарегистрирован`,
+            )
+        }
+
+        return user
+    }
+
     private async generateAndSaveActivationCode({
         email,
         userKey,
@@ -128,43 +120,52 @@ export class ActivationService {
     }: {
         userKey: string
         email: string
-        fingerprint: string
+        fingerprint: IFingerprint
     }): Promise<string> {
         const activationCode = issueActivationCode()
         const userActivation = await this.getUserActivationByKey(userKey)
+        let newOrUpdatedUserActivation: UserActivation
 
         if (userActivation) {
-            await this.checkMaxMailSend(userActivation)
+            await this.handleLargeMailAttempts(userActivation)
 
-            await this.prisma.userActivation.update({
-                where: { id: userActivation.id },
-                data: {
-                    unauthUserKey: userKey,
-                    mailAttempts: {
-                        increment: 1,
+            newOrUpdatedUserActivation =
+                await this.prisma.userActivation.update({
+                    where: { id: userActivation.id },
+                    data: {
+                        unauthUserKey: userKey,
+                        mailAttempts: {
+                            increment: 1,
+                        },
+                        codeAttempts: 1,
+                        activationCode,
+                        emails: pushIfNewElUnique(userActivation.emails, email),
                     },
-                    codeAttempts: 1,
-                    activationCode,
-                    emails: pushIfNewElUnique(userActivation.emails, email),
-                },
-            })
+                })
         } else {
-            await this.prisma.userActivation.create({
-                data: {
-                    unauthUserKey: userKey,
-                    emails: {
-                        set: [email],
+            newOrUpdatedUserActivation =
+                await this.prisma.userActivation.create({
+                    data: {
+                        unauthUserKey: userKey,
+                        emails: {
+                            set: [email],
+                        },
+                        activationCode,
+                        fingerprint: fingerprint.hashFingerprint,
                     },
-                    activationCode,
-                    fingerprint,
-                },
-            })
+                })
         }
+
+        await this.handleBlockSuspicionUser({
+            userActivation: newOrUpdatedUserActivation,
+            email,
+            fingerprint: fingerprint.reqHeadersString,
+        })
 
         return activationCode
     }
 
-    private async checkMaxMailSend(
+    private async handleLargeMailAttempts(
         userActivation: UserActivation,
     ): Promise<void> {
         if (userActivation.mailAttempts > this.MAX_MAIL_ATTEMPTS) {
@@ -174,7 +175,7 @@ export class ActivationService {
         }
     }
 
-    private async handleLargeAttempts({
+    private async handleLargeCodeAttempts({
         userActivation,
         email,
     }: {
@@ -184,7 +185,7 @@ export class ActivationService {
         if (userActivation.codeAttempts > this.MAX_CODE_ATTEMPTS) {
             const newActivationCode = issueActivationCode()
 
-            await this.checkMaxMailSend(userActivation)
+            await this.handleLargeMailAttempts(userActivation)
 
             await this.updateUserActivationAndSendMail({
                 userActivation,
@@ -198,7 +199,7 @@ export class ActivationService {
         }
     }
 
-    private async codeExpiredCheck({
+    private async handleExpiringCode({
         userActivation,
         email,
     }: {
@@ -211,8 +212,8 @@ export class ActivationService {
         oneHourAgo.setMinutes(oneHourAgo.getMinutes() - 1)
 
         if (oneHourAgo > activationDate) {
-            await this.handleLargeAttempts({ userActivation, email })
-            await this.checkMaxMailSend(userActivation)
+            await this.handleLargeCodeAttempts({ userActivation, email })
+            await this.handleLargeMailAttempts(userActivation)
 
             const newActivationCode = issueActivationCode()
 
@@ -224,6 +225,37 @@ export class ActivationService {
 
             throw new BadRequestException(
                 `Срок действия кода активации истёк. Новый код отправлен на почту ${email}.`,
+            )
+        }
+    }
+
+    private async handleInvalidCode({
+        email,
+        userActivation,
+        activationCode,
+    }: {
+        email: string
+        userActivation: UserActivation
+        activationCode: string
+    }) {
+        if (userActivation.activationCode !== activationCode) {
+            await this.handleLastCodeAttempts({
+                email,
+                userActivation,
+                newActivationCode: issueActivationCode(),
+            })
+
+            await this.prisma.userActivation.update({
+                where: { id: userActivation.id },
+                data: {
+                    codeAttempts: {
+                        increment: 1,
+                    },
+                },
+            })
+
+            throw new BadRequestException(
+                `Не верный код активации. Повторите попытку.`,
             )
         }
     }
@@ -247,6 +279,64 @@ export class ActivationService {
             throw new BadRequestException(
                 `Не верный код активации. Новый код отправлен на почту ${email}.`,
             )
+        }
+    }
+
+    private async handleBlockSuspicionUser({
+        userActivation,
+        email,
+        fingerprint,
+    }: {
+        userActivation: UserActivation
+        email: string
+        fingerprint: string
+    }): Promise<void> {
+        if (userActivation.mailAttempts < 3) {
+            const checkAttempts = {
+                mailAttempts: {
+                    gt: this.MAX_MAIL_ATTEMPTS,
+                },
+            }
+            const checkAttemptsAndMail = {
+                ...checkAttempts,
+                emails: {
+                    has: email,
+                },
+            }
+
+            const allSuspicionUsers = await this.prisma.userActivation.findMany(
+                {
+                    where:
+                        userActivation.mailAttempts === 1
+                            ? checkAttemptsAndMail
+                            : checkAttempts,
+                    select: {
+                        fingerprint: true,
+                    },
+                },
+            )
+
+            if (allSuspicionUsers.length) {
+                const isSuspicionUser = await Promise.any(
+                    allSuspicionUsers.map(
+                        async (el) =>
+                            await bcrypt.compare(fingerprint, el.fingerprint),
+                    ),
+                )
+
+                if (isSuspicionUser) {
+                    await this.prisma.userActivation.update({
+                        where: { id: userActivation.id },
+                        data: {
+                            mailAttempts: this.MAX_MAIL_ATTEMPTS + 2,
+                        },
+                    })
+
+                    throw new BadRequestException(
+                        'Вы превысили лимит отправки сообщений. Повторите попытку позже или обратитесь к администратору.',
+                    )
+                }
+            }
         }
     }
 

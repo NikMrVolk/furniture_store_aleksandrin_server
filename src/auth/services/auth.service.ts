@@ -1,13 +1,10 @@
-import {
-    ConflictException,
-    Injectable,
-    NotFoundException,
-} from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { IAuthResponse } from 'src/shared/types/auth.interface'
 import { TokensService } from './tokens.service'
 import { UserService } from 'src/user/user.service'
 import { LoginDto, RegistrationDto } from '../dto'
 import { ActivationService } from './activation.service'
+import { IFingerprint } from '../decorators/fingerprint.decorator'
 
 @Injectable()
 export class AuthService {
@@ -24,9 +21,10 @@ export class AuthService {
     }: {
         userKey: string
         dto: RegistrationDto
-        fingerprint: string
+        fingerprint: IFingerprint
     }): Promise<IAuthResponse> {
         await this.userService.checkingUserExistsByEmail(dto.email)
+
         await this.activationService.checkActivationCode({
             email: dto.email,
             activationCode: dto.activationCode,
@@ -37,7 +35,7 @@ export class AuthService {
 
         const tokens = await this.tokensService.issueTokens({
             id: user.id,
-            fingerprint,
+            fingerprint: fingerprint.hashFingerprint,
             roles: user.roles,
         })
 
@@ -46,7 +44,7 @@ export class AuthService {
 
     public async login(
         dto: LoginDto,
-        fingerprint: string,
+        fingerprint: IFingerprint,
         userKey: string,
     ): Promise<IAuthResponse> {
         const user = await this.userService.getByEmail(dto.email)
@@ -64,7 +62,7 @@ export class AuthService {
 
         const tokens = await this.tokensService.issueTokens({
             id: user.id,
-            fingerprint,
+            fingerprint: fingerprint.hashFingerprint,
             roles: user.roles,
         })
 

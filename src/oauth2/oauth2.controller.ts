@@ -46,13 +46,13 @@ export class OAuth2Controller {
     @Get('google/success')
     async googleSuccess(
         @Query() user: IQueryUser,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint('hashFingerprint') hashFingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
         return await this.oAuthAndResponse({
             url: this.GOOGLE_ACCESS_URL,
             user,
-            fingerprint,
+            fingerprint: hashFingerprint,
             res,
             provider: Provider.GOOGLE,
         })
@@ -77,13 +77,13 @@ export class OAuth2Controller {
     @Get('yandex/success')
     async yandexSuccess(
         @Query() user: IQueryUser,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint('hashFingerprint') hashFingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
         return await this.oAuthAndResponse({
             url: this.YANDEX_ACCESS_URL,
             user,
-            fingerprint,
+            fingerprint: hashFingerprint,
             res,
             provider: Provider.YANDEX,
         })
@@ -104,7 +104,7 @@ export class OAuth2Controller {
     @Get('mailru/success')
     async mailruSuccess(
         @Query() user: IQueryUser,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint('hashFingerprint') hashFingerprint: string,
         @Res({ passthrough: true }) res: Response,
     ) {
         const url = this.MAILRU_ACCESS_URL + '?access_token=' + user.token
@@ -112,7 +112,7 @@ export class OAuth2Controller {
         return await this.oAuthAndResponse({
             url,
             user,
-            fingerprint,
+            fingerprint: hashFingerprint,
             res,
             provider: Provider.MAILRU,
         })

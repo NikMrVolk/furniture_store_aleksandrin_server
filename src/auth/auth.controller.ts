@@ -12,7 +12,7 @@ import {
 import { AuthService } from './services/auth.service'
 import { Request, Response } from 'express'
 import { Access, Refresh } from './decorators/auth.decorator'
-import { Fingerprint } from './decorators/fingerprint.decorator'
+import { Fingerprint, IFingerprint } from './decorators/fingerprint.decorator'
 import { CurrentUser } from './decorators/user.decorator'
 import { TokensService } from './services/tokens.service'
 import {
@@ -45,13 +45,13 @@ export class AuthController {
     async checkMailRegistration(
         @Body() dto: CheckMailRegistrationDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint() fingerprint: IFingerprint,
     ) {
         await this.activationService.checkMail({
             email: dto.email,
             type: 'registration',
             userKey,
-            fingerprint,
+            fingerprint: fingerprint,
         })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -61,7 +61,7 @@ export class AuthController {
     @HttpCode(200)
     @Post('registration')
     async registration(
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint() fingerprint: IFingerprint,
         @Body() dto: RegistrationDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
         @Res({ passthrough: true }) res: Response,
@@ -71,7 +71,7 @@ export class AuthController {
 
         await this.createSessionAndAddRefreshToResponse({
             response,
-            fingerprint,
+            fingerprint: fingerprint.hashFingerprint,
             refreshToken,
             res,
         })
@@ -85,13 +85,13 @@ export class AuthController {
     async checkMail(
         @Body() dto: CheckMailLoginDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint() fingerprint: IFingerprint,
     ) {
         await this.activationService.checkMail({
             email: dto.email,
             type: 'login',
             userKey,
-            fingerprint,
+            fingerprint: fingerprint,
         })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -101,7 +101,7 @@ export class AuthController {
     @HttpCode(200)
     @Post('login')
     async login(
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint() fingerprint: IFingerprint,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
         @Body() dto: LoginDto,
         @Res({ passthrough: true }) res: Response,
@@ -114,7 +114,7 @@ export class AuthController {
         await this.sessionsService.checkQuantitySessions(response.id)
         await this.createSessionAndAddRefreshToResponse({
             response: response,
-            fingerprint,
+            fingerprint: fingerprint.hashFingerprint,
             refreshToken,
             res,
         })
@@ -127,7 +127,7 @@ export class AuthController {
     @Post('login/access-token')
     async loginRefresh(
         @Req() req: Request,
-        @Fingerprint('fingerprint') fingerprint: string,
+        @Fingerprint() fingerprint: IFingerprint,
         @Res({ passthrough: true }) res: Response,
     ): Promise<IAuthResponseWithoutRefresh> {
         const refreshTokenFromCookies = req.cookies[Tokens.REFRESH_TOKEN_NAME]

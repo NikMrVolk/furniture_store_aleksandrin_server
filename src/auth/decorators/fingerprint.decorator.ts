@@ -2,9 +2,9 @@ import { ExecutionContext, createParamDecorator } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
 import { FingerprintKeys } from 'src/shared/types/auth.interface'
 
-interface IFingerprint {
+export interface IFingerprint {
     reqHeadersString: string
-    fingerprint: string
+    hashFingerprint: string
 }
 
 export const Fingerprint = createParamDecorator(
@@ -15,11 +15,14 @@ export const Fingerprint = createParamDecorator(
             .map((key) => request.headers[FingerprintKeys[key]])
             .join('-')
 
-        const fingerprint = bcrypt.hashSync(reqHeadersString, 7)
+        const hashFingerprint = bcrypt.hashSync(reqHeadersString, 7)
 
-        if (data === 'fingerprint') return fingerprint
+        if (data === 'hashFingerprint') return hashFingerprint
         if (data === 'reqHeadersString') return reqHeadersString
 
-        return data
+        return {
+            hashFingerprint,
+            reqHeadersString,
+        }
     },
 )

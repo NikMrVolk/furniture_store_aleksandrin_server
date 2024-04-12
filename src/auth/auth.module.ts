@@ -11,12 +11,14 @@ import { UserModule } from 'src/user/user.module'
 import { SessionsModule } from 'src/sessions/sessions.module'
 import { MailModule } from 'src/mail/mail.module'
 import { ActivationService } from './services/activation.service'
+import { ActivationHandlerService } from './services/activation-handler.service'
 
 @Module({
     controllers: [AuthController],
     providers: [
         AuthService,
         ActivationService,
+        ActivationHandlerService,
         JwtStrategy,
         PrismaService,
         TokensService,

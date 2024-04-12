@@ -29,6 +29,7 @@ export class AuthService {
             email: dto.email,
             activationCode: dto.activationCode,
             userKey,
+            fingerprint: fingerprint.reqHeadersString,
         })
 
         const user = await this.userService.create(dto)
@@ -58,6 +59,7 @@ export class AuthService {
             email: dto.email,
             activationCode: dto.activationCode,
             userKey,
+            fingerprint: fingerprint.reqHeadersString,
         })
 
         const tokens = await this.tokensService.issueTokens({

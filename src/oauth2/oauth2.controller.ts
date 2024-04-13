@@ -5,7 +5,7 @@ import { Fingerprint } from 'src/auth/decorators/fingerprint.decorator'
 import { OAuth2Service } from './oauth2.service'
 import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
 import { IOAuth, IQueryUser, Tokens } from 'src/shared/types/auth.interface'
-import { AuthController } from 'src/auth/auth.controller'
+import { AuthController } from 'src/auth/controllers/auth.controller'
 
 @Controller('oauth2')
 export class OAuth2Controller {

@@ -1,23 +1,10 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { AuthModule } from './auth/auth.module'
-import { OAuth2Module } from './oauth2/oauth2.module'
-import { MailModule } from './mail/mail.module'
-import { UserModule } from './user/user.module'
-import { CartModule } from './cart/cart.module'
-import { FavoritesModule } from './favorites/favorites.module'
-import { SessionsModule } from './sessions/sessions.module';
+import { AuthModule } from './modules/auth/auth.module'
+import { MailsModule } from './modules/mails/mails.module'
+import { UsersModule } from './modules/users/users.module'
 
 @Module({
-    imports: [
-        ConfigModule.forRoot(),
-        AuthModule,
-        OAuth2Module,
-        MailModule,
-        UserModule,
-        CartModule,
-        FavoritesModule,
-        SessionsModule,
-    ],
+    imports: [ConfigModule.forRoot(), AuthModule, MailsModule, UsersModule],
 })
 export class AppModule {}

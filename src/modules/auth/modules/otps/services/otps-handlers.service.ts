@@ -88,7 +88,7 @@ export class OtpsHandlersService {
         const activationDate = new Date(otpInfo.updatedAt)
         const oneHourAgo = new Date()
         oneHourAgo.setHours(
-            oneHourAgo.getMinutes() - this.NUMBER_HOURS_EXPIRE_CODE,
+            oneHourAgo.getHours() - this.NUMBER_HOURS_EXPIRE_CODE,
         )
 
         if (oneHourAgo > activationDate) {

@@ -2,6 +2,7 @@ import {
     Body,
     Controller,
     HttpCode,
+    NotFoundException,
     Post,
     Req,
     Res,
@@ -25,6 +26,7 @@ import {
     CheckMailLoginDto,
     CheckMailRegistrationDto,
     LoginDto,
+    OtpsCreateDto,
     RegistrationDto,
 } from './dto'
 import { Request, Response } from 'express'
@@ -32,11 +34,13 @@ import { AuthService } from './auth.service'
 import { SessionsService } from './modules/sessions/sessions.service'
 import { TokensService } from './modules/tokens/tokens.service'
 import { OtpsBaseService } from './modules/otps/services/otps-base.service'
+import { UsersService } from '../users/users.service'
 
 @Controller('auth')
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
+        private readonly userService: UsersService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
         private readonly otpsBaseService: OtpsBaseService,
@@ -44,17 +48,21 @@ export class AuthController {
 
     @UsePipes(new ValidationPipe())
     @HttpCode(200)
-    @Post('check-mail-registration')
-    async checkMailRegistration(
-        @Body() dto: CheckMailRegistrationDto,
+    @Post('otps/create')
+    public async createOtp(
+        @Body() dto: OtpsCreateDto,
         @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
         @Fingerprint() fingerprint: IFingerprint,
     ) {
-        await this.otpsBaseService.checkMail({
+        await this.checkMail({
             email: dto.email,
-            type: 'registration',
+            type: dto.type,
+        })
+
+        await this.otpsBaseService.getAndSendOtp({
+            email: dto.email,
             userKey,
-            fingerprint: fingerprint,
+            fingerprint,
         })
 
         return `Код подтверждения отправлен на почту ${dto.email}`
@@ -82,24 +90,6 @@ export class AuthController {
         this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
-    }
-
-    @UsePipes(new ValidationPipe())
-    @HttpCode(200)
-    @Post('check-mail-login')
-    async checkMail(
-        @Body() dto: CheckMailLoginDto,
-        @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
-        @Fingerprint() fingerprint: IFingerprint,
-    ) {
-        await this.otpsBaseService.checkMail({
-            email: dto.email,
-            type: 'login',
-            userKey,
-            fingerprint: fingerprint,
-        })
-
-        return `Код подтверждения отправлен на почту ${dto.email}`
     }
 
     @UsePipes(new ValidationPipe())
@@ -180,10 +170,25 @@ export class AuthController {
         this.tokensService.removeRefreshTokenFromResponse(res)
     }
 
-    // @HttpCode(200)
-    // @Access()
-    // @Get()
-    // async getAll(): Promise<IUserWithoutPassword[]> {
-    //     return this.userService.getAll()
-    // }
+    private async checkMail({
+        email,
+        type,
+    }: {
+        email: string
+        type: 'login' | 'registration'
+    }) {
+        if (type === 'registration') {
+            await this.userService.checkingUserExistsByEmail(email)
+        }
+
+        if (type === 'login') {
+            const user = await this.userService.getByEmail(email)
+
+            if (!user) {
+                throw new NotFoundException(
+                    `Пользователь с почтой ${email} не зарегистрирован`,
+                )
+            }
+        }
+    }
 }

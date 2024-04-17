@@ -12,29 +12,18 @@ export class OtpsBaseService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mailService: MailsService,
-        private readonly userService: UsersService,
         private readonly otpsHandlersService: OtpsHandlersService,
     ) {}
 
-    public async checkMail({
+    public async getAndSendOtp({
         email,
-        type,
         userKey,
         fingerprint,
     }: {
         email: string
-        type: 'login' | 'registration'
         userKey: string
         fingerprint: IFingerprint
     }): Promise<void> {
-        if (type === 'registration') {
-            await this.userService.checkingUserExistsByEmail(email)
-        }
-
-        if (type === 'login') {
-            await this.getUserByEmailAndCheck(email)
-        }
-
         const otpCode = await this.generateAndSaveOtpCode({
             email,
             userKey,
@@ -150,17 +139,5 @@ export class OtpsBaseService {
         return await this.prisma.otpInfo.findUnique({
             where: { unauthUserKey: userKey },
         })
-    }
-
-    private async getUserByEmailAndCheck(email: string): Promise<User> {
-        const user = await this.userService.getByEmail(email)
-
-        if (!user) {
-            throw new NotFoundException(
-                `Пользователь с почтой ${email} не зарегистрирован`,
-            )
-        }
-
-        return user
     }
 }

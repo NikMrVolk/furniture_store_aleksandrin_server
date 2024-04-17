@@ -1,8 +1,11 @@
-import { IsString, Length } from 'class-validator'
-import { CheckMailRegistrationDto } from './check-mail-registration.dto'
+import { IsNotEmpty, IsString } from 'class-validator'
+import { LoginDto } from './login.dto'
 
-export class RegistrationDto extends CheckMailRegistrationDto {
-    @IsString({ message: 'Некоректный код активации' })
-    @Length(4, 4, { message: 'Код активации должен состоять из 4 цифр' })
-    readonly otpCode: string
+export class RegistrationDto extends LoginDto {
+    @IsString({ message: 'Некоректное имя пользователя' })
+    @IsNotEmpty({ message: 'Имя пользователя не может пыть пустым' })
+    readonly name: string
+
+    readonly surname?: string
+    readonly phone?: string
 }

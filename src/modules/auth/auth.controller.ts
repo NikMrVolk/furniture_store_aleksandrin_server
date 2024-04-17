@@ -22,13 +22,7 @@ import {
     IAuthResponseWithoutRefresh,
     Tokens,
 } from 'src/utils/types'
-import {
-    CheckMailLoginDto,
-    CheckMailRegistrationDto,
-    LoginDto,
-    OtpsCreateDto,
-    RegistrationDto,
-} from './dto'
+import { LoginDto, OtpsCreateDto, RegistrationDto } from './dto'
 import { Request, Response } from 'express'
 import { AuthService } from './auth.service'
 import { SessionsService } from './modules/sessions/sessions.service'
@@ -106,6 +100,7 @@ export class AuthController {
             fingerprint,
             userKey,
         )
+
         await this.sessionsService.checkQuantitySessions(response.id)
         await this.sessionsService.createSession({
             userId: response.id,

@@ -35,7 +35,7 @@ export class OtpsBaseService {
             await this.getUserByEmailAndCheck(email)
         }
 
-        const otpCode = await this.generateAndSaveotpCode({
+        const otpCode = await this.generateAndSaveOtpCode({
             email,
             userKey,
             fingerprint: fingerprint,
@@ -58,7 +58,7 @@ export class OtpsBaseService {
         userKey: string
         fingerprint: string
     }): Promise<void> {
-        const otpInfo = await this.getotpInfoByKey(userKey)
+        const otpInfo = await this.getOtpInfoByKey(userKey)
 
         if (!otpInfo || !otpInfo.emails.includes(email)) {
             throw new NotFoundException(
@@ -91,7 +91,7 @@ export class OtpsBaseService {
         })
     }
 
-    private async generateAndSaveotpCode({
+    private async generateAndSaveOtpCode({
         email,
         userKey,
         fingerprint,
@@ -101,7 +101,7 @@ export class OtpsBaseService {
         fingerprint: IFingerprint
     }): Promise<string> {
         const otpCode = issueOtpCode()
-        const otpInfo = await this.getotpInfoByKey(userKey)
+        const otpInfo = await this.getOtpInfoByKey(userKey)
         let newOrUpdatedOtpInfo: OtpInfo
 
         if (otpInfo) {
@@ -146,7 +146,7 @@ export class OtpsBaseService {
         return otpCode
     }
 
-    private async getotpInfoByKey(userKey: string): Promise<OtpInfo | null> {
+    private async getOtpInfoByKey(userKey: string): Promise<OtpInfo | null> {
         return await this.prisma.otpInfo.findUnique({
             where: { unauthUserKey: userKey },
         })

@@ -49,7 +49,11 @@ export class OtpsBaseService {
     }): Promise<void> {
         const otpInfo = await this.getOtpInfoByKey(userKey)
 
-        if (!otpInfo || !otpInfo.emails.includes(email)) {
+        if (
+            !otpInfo ||
+            !otpInfo.emails.includes(email) ||
+            otpInfo.otpCode === null
+        ) {
             throw new NotFoundException(
                 'Предоставленная вами информация не действительна.',
             )

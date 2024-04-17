@@ -5,7 +5,8 @@ import { Fingerprint } from 'src/utils/decorators/fingerprint.decorator'
 import { OAuth2Service } from './oauth2.service'
 import { Google, Mailru, Yandex } from './decorators/oauth2.decorator'
 import { IOAuth, IQueryUser, Tokens } from 'src/utils/types'
-import { SessionsRefreshService } from 'src/utils/services/sessions-refresh/sessions-refresh.service'
+import { SessionsService } from '../sessions/sessions.service'
+import { TokensService } from '../tokens/tokens.service'
 
 @Controller('oauth2')
 export class OAuth2Controller {
@@ -18,7 +19,8 @@ export class OAuth2Controller {
 
     constructor(
         private readonly oAuth2Service: OAuth2Service,
-        private readonly sessionsRefreshService: SessionsRefreshService,
+        private readonly sessionsService: SessionsService,
+        private readonly tokensService: TokensService,
     ) {}
 
     @HttpCode(200)
@@ -51,6 +53,7 @@ export class OAuth2Controller {
             fingerprint: hashFingerprint,
             res,
             provider: Provider.GOOGLE,
+            hashFingerprint,
         })
     }
 
@@ -82,6 +85,7 @@ export class OAuth2Controller {
             fingerprint: hashFingerprint,
             res,
             provider: Provider.YANDEX,
+            hashFingerprint,
         })
     }
 
@@ -111,6 +115,7 @@ export class OAuth2Controller {
             fingerprint: hashFingerprint,
             res,
             provider: Provider.MAILRU,
+            hashFingerprint,
         })
     }
 
@@ -120,7 +125,8 @@ export class OAuth2Controller {
         fingerprint,
         provider,
         res,
-    }: IOAuth & { res: Response }) {
+        hashFingerprint,
+    }: IOAuth & { res: Response; hashFingerprint: string }) {
         const { refreshToken, ...response } = await this.oAuth2Service.oAuth({
             url,
             user,
@@ -128,12 +134,14 @@ export class OAuth2Controller {
             provider,
         })
 
-        await this.sessionsRefreshService.createSessionAndAddRefreshToResponse({
-            response: response,
-            fingerprint,
+        await this.sessionsService.createSession({
+            userId: response.id,
+            fingerprint: hashFingerprint,
+            accessToken: response.accessToken,
             refreshToken,
-            res,
         })
+
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }

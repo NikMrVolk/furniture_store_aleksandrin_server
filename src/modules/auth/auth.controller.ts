@@ -32,7 +32,6 @@ import { AuthService } from './auth.service'
 import { SessionsService } from './modules/sessions/sessions.service'
 import { TokensService } from './modules/tokens/tokens.service'
 import { OtpsBaseService } from './modules/otps/services/otps-base.service'
-import { SessionsRefreshService } from 'src/utils/services/sessions-refresh/sessions-refresh.service'
 
 @Controller('auth')
 export class AuthController {
@@ -41,7 +40,6 @@ export class AuthController {
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
         private readonly otpsBaseService: OtpsBaseService,
-        private readonly sessionsRefreshService: SessionsRefreshService,
     ) {}
 
     @UsePipes(new ValidationPipe())
@@ -74,12 +72,14 @@ export class AuthController {
         const { refreshToken, ...response } =
             await this.authService.registration({ dto, fingerprint, userKey })
 
-        await this.sessionsRefreshService.createSessionAndAddRefreshToResponse({
-            response,
+        await this.sessionsService.createSession({
+            userId: response.id,
             fingerprint: fingerprint.hashFingerprint,
+            accessToken: response.accessToken,
             refreshToken,
-            res,
         })
+
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }
@@ -117,12 +117,14 @@ export class AuthController {
             userKey,
         )
         await this.sessionsService.checkQuantitySessions(response.id)
-        await this.sessionsRefreshService.createSessionAndAddRefreshToResponse({
-            response: response,
+        await this.sessionsService.createSession({
+            userId: response.id,
             fingerprint: fingerprint.hashFingerprint,
+            accessToken: response.accessToken,
             refreshToken,
-            res,
         })
+
+        this.tokensService.addRefreshTokenToResponse(res, refreshToken)
 
         return response
     }

@@ -5,10 +5,16 @@ import { HttpModule } from '@nestjs/axios'
 import { GoogleStrategy, MailruStrategy, YandexStrategy } from './strategies'
 import { SessionsModule } from '../sessions/sessions.module'
 import { UsersModule } from 'src/modules/users/users.module'
-import { SessionsRefreshModule } from 'src/utils/services/sessions-refresh/sessions-refresh.module'
+import { TokensModule } from '../tokens/tokens.module'
 
 @Module({
-    imports: [HttpModule, UsersModule, SessionsModule, SessionsRefreshModule],
+    imports: [
+        HttpModule,
+        UsersModule,
+        SessionsModule,
+        SessionsModule,
+        TokensModule,
+    ],
     controllers: [OAuth2Controller],
     providers: [OAuth2Service, GoogleStrategy, YandexStrategy, MailruStrategy],
 })

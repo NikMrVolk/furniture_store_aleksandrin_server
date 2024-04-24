@@ -31,12 +31,12 @@ model OtpInfo {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  emails        String[]
+  emails        String
   fingerprint   String
-  unauthUserKey String   @unique @map("unauth_user_key")
-  otpCode       String?  @map("activation_code")
-  codeAttempts  Int      @default(1) @map("code_attempts")
-  mailAttempts  Int      @default(1) @map("mail_attempts")
+  unauthUserKey String  @unique @map("unauth_user_key")
+  otpCode       String? @map("activation_code")
+  codeAttempts  Int     @default(1) @map("code_attempts")
+  mailAttempts  Int     @default(1) @map("mail_attempts")
 
   @@map("otps_info")
 }

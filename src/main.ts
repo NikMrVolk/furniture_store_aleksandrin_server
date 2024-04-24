@@ -23,7 +23,7 @@ const start = async () => {
             .addTag('AleksandriN')
             .build()
         const document = SwaggerModule.createDocument(app, config, {
-            ignoreGlobalPrefix: true,
+            ignoreGlobalPrefix: false,
         })
         SwaggerModule.setup('/api/docs', app, document)
 

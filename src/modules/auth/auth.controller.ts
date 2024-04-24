@@ -2,7 +2,6 @@ import {
     Body,
     Controller,
     HttpCode,
-    NotFoundException,
     Post,
     Req,
     Res,
@@ -22,45 +21,19 @@ import {
     IAuthResponseWithoutRefresh,
     Tokens,
 } from 'src/utils/types'
-import { LoginDto, OtpsCreateDto, RegistrationDto } from './dto'
+import { LoginDto, RegistrationDto } from './dto'
 import { Request, Response } from 'express'
 import { AuthService } from './auth.service'
 import { SessionsService } from './modules/sessions/sessions.service'
 import { TokensService } from './modules/tokens/tokens.service'
-import { OtpsBaseService } from './modules/otps/services/otps-base.service'
-import { UsersService } from '../users/users.service'
 
 @Controller('auth')
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
-        private readonly userService: UsersService,
         private readonly sessionsService: SessionsService,
         private readonly tokensService: TokensService,
-        private readonly otpsBaseService: OtpsBaseService,
     ) {}
-
-    @UsePipes(new ValidationPipe())
-    @HttpCode(200)
-    @Post('otps/create')
-    public async createOtp(
-        @Body() dto: OtpsCreateDto,
-        @CookieValue(CookieNames.UNAUTHORIZED_USER_KEY) userKey: string,
-        @Fingerprint() fingerprint: IFingerprint,
-    ) {
-        await this.checkMail({
-            email: dto.email,
-            type: dto.type,
-        })
-
-        await this.otpsBaseService.getAndSendOtp({
-            email: dto.email,
-            userKey,
-            fingerprint,
-        })
-
-        return `Код подтверждения отправлен на почту ${dto.email}`
-    }
 
     @UsePipes(new ValidationPipe())
     @HttpCode(200)
@@ -163,27 +136,5 @@ export class AuthController {
             refreshTokenFromCookies,
         )
         this.tokensService.removeRefreshTokenFromResponse(res)
-    }
-
-    private async checkMail({
-        email,
-        type,
-    }: {
-        email: string
-        type: 'login' | 'registration'
-    }) {
-        if (type === 'registration') {
-            await this.userService.checkingUserExistsByEmail(email)
-        }
-
-        if (type === 'login') {
-            const user = await this.userService.getByEmail(email)
-
-            if (!user) {
-                throw new NotFoundException(
-                    `Пользователь с почтой ${email} не зарегистрирован`,
-                )
-            }
-        }
     }
 }

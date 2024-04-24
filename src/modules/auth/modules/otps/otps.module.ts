@@ -7,9 +7,10 @@ import {
     OtpsManageService,
 } from './services'
 import { OtpsController } from './otps.controller'
+import { UsersModule } from 'src/modules/users/users.module'
 
 @Module({
-    imports: [MailsModule],
+    imports: [MailsModule, UsersModule],
     providers: [
         OtpsBaseService,
         OtpsHandlersService,

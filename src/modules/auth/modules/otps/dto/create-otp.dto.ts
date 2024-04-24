@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsString } from 'class-validator'
 
-export class OtpsCreateDto {
+export class OtpCreateDto {
     @IsEmail({}, { message: 'Проверьте введённую почту' })
     readonly email: string
 

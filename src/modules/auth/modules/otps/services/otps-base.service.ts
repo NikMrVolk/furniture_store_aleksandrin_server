@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { OtpsHandlersService } from './otps-handlers.service'
 import { IFingerprint } from 'src/utils/decorators'
-import { OtpInfo, User } from '@prisma/client'
-import { issueOtpCode, pushIfNewElUnique } from 'src/utils/helpers'
+import { OtpInfo } from '@prisma/client'
+import { concatIfStringNotInclude, issueOtpCode } from 'src/utils/helpers'
 import { MailsService } from 'src/modules/mails/mails.service'
-import { UsersService } from 'src/modules/users/users.service'
 import { PrismaService } from 'src/utils/services/prisma'
 
 @Injectable()
@@ -114,16 +113,17 @@ export class OtpsBaseService {
                     },
                     codeAttempts: this.otpsHandlersService.ATTEMPTS_START_VALUE,
                     otpCode,
-                    emails: pushIfNewElUnique(otpInfo.emails, email),
+                    emails: concatIfStringNotInclude({
+                        str: otpInfo.emails,
+                        newStr: email,
+                    }),
                 },
             })
         } else {
             newOrUpdatedOtpInfo = await this.prisma.otpInfo.create({
                 data: {
                     unauthUserKey: userKey,
-                    emails: {
-                        set: [email],
-                    },
+                    emails: email,
                     otpCode,
                     fingerprint: fingerprint.hashFingerprint,
                 },

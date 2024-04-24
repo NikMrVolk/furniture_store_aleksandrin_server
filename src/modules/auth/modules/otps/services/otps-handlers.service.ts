@@ -31,17 +31,15 @@ export class OtpsHandlersService {
         fingerprint: string
     }): Promise<void> {
         if (otpInfo.mailAttempts < this.SUSPICIOUSNESS_CHECK_LIMIT) {
-            const whereOptions = {
-                mailAttempts: {
-                    gte: this.MAX_MAIL_ATTEMPTS,
-                },
-                ...(otpInfo.mailAttempts === this.ATTEMPTS_START_VALUE
-                    ? { emails: { has: email } }
-                    : {}),
-            }
-
             const allSuspicionUsers = await this.prisma.otpInfo.findMany({
-                where: whereOptions,
+                where: {
+                    mailAttempts: {
+                        gte: this.MAX_MAIL_ATTEMPTS,
+                    },
+                    ...(otpInfo.mailAttempts === this.ATTEMPTS_START_VALUE && {
+                        emails: { contains: email },
+                    }),
+                },
                 select: {
                     fingerprint: true,
                 },

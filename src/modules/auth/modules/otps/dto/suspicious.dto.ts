@@ -11,10 +11,10 @@ export class SuspiciousDto {
     @ApiProperty({
         required: true,
         description: 'The email of the suspicious record',
-        example: ['a@a.com', 'bb@b.com'],
-        type: [String],
+        example: 'a@a.com b@b.com',
+        type: String,
     })
-    readonly emails: string[]
+    readonly emails: string
 
     @ApiProperty({
         required: true,
